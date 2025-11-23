@@ -392,16 +392,11 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
         return;
       }
 
-      if (!formData.categoryId) {
-        alert('Выберите категорию. Без категории товар не будет отображаться в магазине.');
-        return;
-      }
-
       const productData = {
         name: formData.name,
         description: formData.description || null,
         price: parseFloat(formData.price),
-        category_id: formData.categoryId,
+        category_id: formData.categoryId || null,
         images_urls: formData.imagesUrls,
         is_active: formData.isActive,
         stock_quantity: 0,
