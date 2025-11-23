@@ -15,10 +15,11 @@ const DIGITAL_TYPES = [
 interface CategoryTypeSelectorProps {
   onBack: () => void;
   onSelectType: (mainType: 'digital' | 'physical', subType: string) => void;
+  initialMainType?: 'digital' | 'physical';
 }
 
-export const CategoryTypeSelector = ({ onBack, onSelectType }: CategoryTypeSelectorProps) => {
-  const [selectedMainType, setSelectedMainType] = useState<'digital' | 'physical' | null>(null);
+export const CategoryTypeSelector = ({ onBack, onSelectType, initialMainType }: CategoryTypeSelectorProps) => {
+  const [selectedMainType, setSelectedMainType] = useState<'digital' | 'physical' | null>(initialMainType || null);
   const { webApp } = useTelegram();
 
   const handleMainTypeSelect = (type: 'digital' | 'physical') => {
@@ -36,7 +37,11 @@ export const CategoryTypeSelector = ({ onBack, onSelectType }: CategoryTypeSelec
   };
 
   const handleBackClick = () => {
-    onBack();
+    if (selectedMainType) {
+      setSelectedMainType(null);
+    } else {
+      onBack();
+    }
   };
 
   return (
