@@ -695,7 +695,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
               </button>
 
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {currentAccountIndex + 1} аккаунт (Всего {accounts.length} {accounts.length === 0 ? 'аккаунтов' : accounts.length === 1 ? 'аккаунт' : accounts.length < 5 ? 'аккаунта' : 'аккаунтов'})
+                {currentAccountIndex + 1} аккаунт (Всего {accounts.filter(acc => acc.login.trim()).length} {accounts.filter(acc => acc.login.trim()).length === 0 ? 'аккаунтов' : accounts.filter(acc => acc.login.trim()).length === 1 ? 'аккаунт' : accounts.filter(acc => acc.login.trim()).length < 5 ? 'аккаунта' : 'аккаунтов'})
               </span>
 
               <button
