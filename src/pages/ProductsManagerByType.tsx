@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Edit2, Trash2, Upload, X, DollarSign } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Plus, Edit2, Trash2, Upload, X, DollarSign, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../lib/database.types';
 import { Button } from '../components/Button';
@@ -56,6 +56,9 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   });
   const [imageUrl, setImageUrl] = useState('');
   const [instructionImageUrl, setInstructionImageUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const instructionImageInputRef = useRef<HTMLInputElement>(null);
   const { webApp } = useTelegram();
 
   useEffect(() => {
@@ -207,6 +210,75 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
     }
   };
 
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      setUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${storeId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('store-assets')
+        .upload(fileName, file, {
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('store-assets').getPublicUrl(fileName);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      webApp?.showAlert('Ошибка загрузки изображения');
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const url = await uploadImage(file);
+    if (url) {
+      setFormData({
+        ...formData,
+        imagesUrls: [...formData.imagesUrls, url],
+      });
+    }
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+  };
+
+  const handleInstructionImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const url = await uploadImage(file);
+    if (url) {
+      const currentText = languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn;
+      const imageMarkdown = `\n![Изображение](${url})\n`;
+
+      if (languageTab === 'ru') {
+        setFormData({
+          ...formData,
+          instructionsRu: currentText + imageMarkdown,
+        });
+      } else {
+        setFormData({
+          ...formData,
+          instructionsEn: currentText + imageMarkdown,
+        });
+      }
+    }
+    if (instructionImageInputRef.current) {
+      instructionImageInputRef.current.value = '';
+    }
+  };
+
   const addImage = () => {
     if (imageUrl.trim()) {
       setFormData({
@@ -226,10 +298,20 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
 
   const addInstructionImage = () => {
     if (instructionImageUrl.trim()) {
-      setFormData({
-        ...formData,
-        instructionsImages: [...formData.instructionsImages, instructionImageUrl.trim()],
-      });
+      const currentText = languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn;
+      const imageMarkdown = `\n![Изображение](${instructionImageUrl.trim()})\n`;
+
+      if (languageTab === 'ru') {
+        setFormData({
+          ...formData,
+          instructionsRu: currentText + imageMarkdown,
+        });
+      } else {
+        setFormData({
+          ...formData,
+          instructionsEn: currentText + imageMarkdown,
+        });
+      }
       setInstructionImageUrl('');
     }
   };
@@ -444,12 +526,29 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
               Изображения товара
             </label>
             <div className="flex gap-2 mb-2">
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <Button
+                onClick={() => imageInputRef.current?.click()}
+                size="sm"
+                disabled={uploading}
+                className="whitespace-nowrap"
+              >
+                <Upload className="w-4 h-4 mr-1" />
+                {uploading ? 'Загрузка...' : 'Загрузить'}
+              </Button>
               <Input
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="URL изображения"
+                placeholder="или вставьте URL"
+                className="flex-1"
               />
-              <Button onClick={addImage} size="sm">
+              <Button onClick={addImage} size="sm" disabled={!imageUrl.trim()}>
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
@@ -503,13 +602,16 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
 
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <h3 className="font-medium text-gray-900 dark:text-white mb-3">Инструкции</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+              Можно добавлять текст и изображения. Изображения автоматически встраиваются в текст.
+            </p>
             {languageTab === 'ru' ? (
               <Textarea
                 label="Инструкции (RU)"
                 value={formData.instructionsRu}
                 onChange={(e) => setFormData({ ...formData, instructionsRu: e.target.value })}
                 placeholder="Инструкция по использованию"
-                rows={4}
+                rows={6}
               />
             ) : (
               <Textarea
@@ -517,39 +619,41 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
                 value={formData.instructionsEn}
                 onChange={(e) => setFormData({ ...formData, instructionsEn: e.target.value })}
                 placeholder="Usage instructions"
-                rows={4}
+                rows={6}
               />
             )}
             <div className="mt-3">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Изображения для инструкций
+                Добавить изображение в инструкцию
               </label>
-              <div className="flex gap-2 mb-2">
+              <div className="flex gap-2">
+                <input
+                  ref={instructionImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleInstructionImageUpload}
+                  className="hidden"
+                />
+                <Button
+                  onClick={() => instructionImageInputRef.current?.click()}
+                  size="sm"
+                  disabled={uploading}
+                  variant="secondary"
+                  className="whitespace-nowrap"
+                >
+                  <ImageIcon className="w-4 h-4 mr-1" />
+                  {uploading ? 'Загрузка...' : 'Загрузить фото'}
+                </Button>
                 <Input
                   value={instructionImageUrl}
                   onChange={(e) => setInstructionImageUrl(e.target.value)}
-                  placeholder="URL изображения"
+                  placeholder="или вставьте URL изображения"
+                  className="flex-1"
                 />
-                <Button onClick={addInstructionImage} size="sm">
+                <Button onClick={addInstructionImage} size="sm" disabled={!instructionImageUrl.trim()}>
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
-              {formData.instructionsImages.length > 0 && (
-                <div className="space-y-2">
-                  {formData.instructionsImages.map((url, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                      <img src={url} alt="" className="w-12 h-12 object-cover rounded" />
-                      <span className="flex-1 text-sm text-gray-600 dark:text-gray-400 truncate">{url}</span>
-                      <button
-                        onClick={() => removeInstructionImage(index)}
-                        className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
 
