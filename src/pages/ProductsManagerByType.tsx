@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Plus, Edit2, Trash2, Upload, X, DollarSign, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Plus, Edit2, Trash2, Upload, X, DollarSign, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../lib/database.types';
 import { Button } from '../components/Button';
@@ -59,6 +59,13 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
     accountEmail: '',
     accountEmailPassword: '',
   });
+  const [accounts, setAccounts] = useState<Array<{
+    login: string;
+    password: string;
+    email: string;
+    emailPassword: string;
+  }>>([]);
+  const [currentAccountIndex, setCurrentAccountIndex] = useState(0);
   const [imageUrl, setImageUrl] = useState('');
   const [instructionImageUrl, setInstructionImageUrl] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -320,6 +327,8 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
         instructionsImagesEn: [],
         isActive: true,
       });
+      setAccounts([]);
+      setCurrentAccountIndex(0);
     }
     setShowModal(true);
   };
@@ -670,6 +679,115 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
                 RUB
               </div>
             </div>
+          </div>
+
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="font-medium text-gray-900 dark:text-white mb-3">Данные пользователю после покупки</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              Логин : Пароль : Почта : Пароль от почты
+            </p>
+
+            <div className="flex items-center justify-between mb-3">
+              <button
+                type="button"
+                onClick={() => setCurrentAccountIndex(Math.max(0, currentAccountIndex - 1))}
+                disabled={currentAccountIndex === 0}
+                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {currentAccountIndex + 1} аккаунт (Всего {accounts.length} {accounts.length === 0 ? 'аккаунтов' : accounts.length === 1 ? 'аккаунт' : accounts.length < 5 ? 'аккаунта' : 'аккаунтов'})
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (currentAccountIndex === accounts.length - 1) {
+                    setAccounts([...accounts, { login: '', password: '', email: '', emailPassword: '' }]);
+                    setCurrentAccountIndex(accounts.length);
+                  } else {
+                    setCurrentAccountIndex(Math.min(accounts.length - 1, currentAccountIndex + 1));
+                  }
+                }}
+                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {accounts.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setAccounts([{ login: '', password: '', email: '', emailPassword: '' }]);
+                  setCurrentAccountIndex(0);
+                }}
+                className="w-full py-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 transition-colors"
+              >
+                + Добавить первый аккаунт
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <textarea
+                  value={accounts[currentAccountIndex]?.login || ''}
+                  onChange={(e) => {
+                    const newAccounts = [...accounts];
+                    newAccounts[currentAccountIndex] = { ...newAccounts[currentAccountIndex], login: e.target.value };
+                    setAccounts(newAccounts);
+                  }}
+                  placeholder="Логин"
+                  rows={1}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                />
+                <textarea
+                  value={accounts[currentAccountIndex]?.password || ''}
+                  onChange={(e) => {
+                    const newAccounts = [...accounts];
+                    newAccounts[currentAccountIndex] = { ...newAccounts[currentAccountIndex], password: e.target.value };
+                    setAccounts(newAccounts);
+                  }}
+                  placeholder="Пароль"
+                  rows={1}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                />
+                <textarea
+                  value={accounts[currentAccountIndex]?.email || ''}
+                  onChange={(e) => {
+                    const newAccounts = [...accounts];
+                    newAccounts[currentAccountIndex] = { ...newAccounts[currentAccountIndex], email: e.target.value };
+                    setAccounts(newAccounts);
+                  }}
+                  placeholder="Почта"
+                  rows={1}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                />
+                <textarea
+                  value={accounts[currentAccountIndex]?.emailPassword || ''}
+                  onChange={(e) => {
+                    const newAccounts = [...accounts];
+                    newAccounts[currentAccountIndex] = { ...newAccounts[currentAccountIndex], emailPassword: e.target.value };
+                    setAccounts(newAccounts);
+                  }}
+                  placeholder="Пароль от почты"
+                  rows={1}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newAccounts = accounts.filter((_, index) => index !== currentAccountIndex);
+                    setAccounts(newAccounts);
+                    setCurrentAccountIndex(Math.max(0, currentAccountIndex - 1));
+                  }}
+                  className="text-sm text-red-600 dark:text-red-400 hover:underline"
+                >
+                  Удалить этот аккаунт
+                </button>
+              </div>
+            )}
           </div>
 
           <div>
