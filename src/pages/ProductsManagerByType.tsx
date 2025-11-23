@@ -323,6 +323,46 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
     });
   };
 
+  const handlePasteImage = async (e: React.ClipboardEvent, type: 'product' | 'instruction') => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) continue;
+
+        const url = await uploadImage(file);
+        if (url) {
+          if (type === 'product') {
+            setFormData({
+              ...formData,
+              imagesUrls: [...formData.imagesUrls, url],
+            });
+          } else {
+            const currentText = languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn;
+            const imageMarkdown = `\n![Изображение](${url})\n`;
+
+            if (languageTab === 'ru') {
+              setFormData({
+                ...formData,
+                instructionsRu: currentText + imageMarkdown,
+              });
+            } else {
+              setFormData({
+                ...formData,
+                instructionsEn: currentText + imageMarkdown,
+              });
+            }
+          }
+        }
+        break;
+      }
+    }
+  };
+
   const getCategoryName = (categoryId: string) => {
     return categories.find((c) => c.id === categoryId)?.name || 'Без категории';
   };
@@ -428,7 +468,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
         onClose={() => setShowModal(false)}
         title={editingProduct ? 'Редактировать товар' : 'Новый товар'}
       >
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => setLanguageTab('ru')}
@@ -545,7 +585,8 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
               <Input
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="или вставьте URL"
+                onPaste={(e) => handlePasteImage(e, 'product')}
+                placeholder="или вставьте URL / Ctrl+V для изображения"
                 className="flex-1"
               />
               <Button onClick={addImage} size="sm" disabled={!imageUrl.trim()}>
@@ -603,14 +644,15 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <h3 className="font-medium text-gray-900 dark:text-white mb-3">Инструкции</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-              Можно добавлять текст и изображения. Изображения автоматически встраиваются в текст.
+              Можно добавлять текст и изображения. Используйте Ctrl+V для вставки изображений из буфера обмена.
             </p>
             {languageTab === 'ru' ? (
               <Textarea
                 label="Инструкции (RU)"
                 value={formData.instructionsRu}
                 onChange={(e) => setFormData({ ...formData, instructionsRu: e.target.value })}
-                placeholder="Инструкция по использованию"
+                onPaste={(e) => handlePasteImage(e, 'instruction')}
+                placeholder="Инструкция по использованию (Ctrl+V для вставки изображений)"
                 rows={6}
               />
             ) : (
@@ -618,7 +660,8 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
                 label="Instructions (EN)"
                 value={formData.instructionsEn}
                 onChange={(e) => setFormData({ ...formData, instructionsEn: e.target.value })}
-                placeholder="Usage instructions"
+                onPaste={(e) => handlePasteImage(e, 'instruction')}
+                placeholder="Usage instructions (Ctrl+V to paste images)"
                 rows={6}
               />
             )}
@@ -647,7 +690,8 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
                 <Input
                   value={instructionImageUrl}
                   onChange={(e) => setInstructionImageUrl(e.target.value)}
-                  placeholder="или вставьте URL изображения"
+                  onPaste={(e) => handlePasteImage(e, 'instruction')}
+                  placeholder="или вставьте URL / Ctrl+V для изображения"
                   className="flex-1"
                 />
                 <Button onClick={addInstructionImage} size="sm" disabled={!instructionImageUrl.trim()}>
