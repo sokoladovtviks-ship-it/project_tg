@@ -23,7 +23,7 @@ export const CategoryTypeSelector = ({ onBack, onSelectType }: CategoryTypeSelec
 
   const handleMainTypeSelect = (type: 'digital' | 'physical') => {
     if (type === 'physical') {
-      webApp?.showAlert('Физические товары находятся в разработке');
+      webApp?.showAlert('Физические категории находятся в разработке');
       return;
     }
     setSelectedMainType(type);
@@ -74,7 +74,7 @@ export const CategoryTypeSelector = ({ onBack, onSelectType }: CategoryTypeSelec
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                      Цифровой товар
+                      Цифровая категория
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       Аккаунты, подписки, игровые предметы
@@ -97,7 +97,7 @@ export const CategoryTypeSelector = ({ onBack, onSelectType }: CategoryTypeSelec
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-                      Физический товар
+                      Физическая категория
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       В разработке
