@@ -22,6 +22,8 @@ import { TelegramManager } from './pages/TelegramManager';
 import { CategoryTypeSelector } from './pages/CategoryTypeSelector';
 import { CategoriesManagerByType } from './pages/CategoriesManagerByType';
 import { SubcategoriesPage } from './pages/SubcategoriesPage';
+import { ProductTypeSelector } from './pages/ProductTypeSelector';
+import { ProductsManagerByType } from './pages/ProductsManagerByType';
 
 type Page =
   | 'store'
@@ -37,6 +39,7 @@ type Page =
   | 'admin-products-selector'
   | 'admin-categories'
   | 'admin-products'
+  | 'admin-products-by-type'
   | 'admin-orders'
   | 'admin-payments'
   | 'admin-deliveries'
@@ -51,7 +54,9 @@ function App() {
   const [storeId, setStoreId] = useState<string | null>(null);
   const [storeType, setStoreType] = useState<'digital' | 'physical'>('digital');
   const [selectedCategoryType, setSelectedCategoryType] = useState<string>('');
+  const [selectedProductType, setSelectedProductType] = useState<string>('');
   const [showCategoryTypesList, setShowCategoryTypesList] = useState(false);
+  const [showProductTypesList, setShowProductTypesList] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const { user, webApp } = useTelegram();
@@ -291,7 +296,7 @@ function App() {
             onNavigate={(page) => {
               const pageMap: Record<string, Page> = {
                 categories: 'admin-categories-selector',
-                products: 'admin-products',
+                products: 'admin-products-selector',
                 orders: 'admin-orders',
                 payments: 'admin-payments',
                 deliveries: 'admin-deliveries',
@@ -324,6 +329,29 @@ function App() {
             storeId={storeId}
             categoryType={selectedCategoryType}
             onBack={() => setCurrentPage('admin-categories-selector')}
+          />
+        )}
+
+        {currentPage === 'admin-products-selector' && (
+          <ProductTypeSelector
+            onBack={() => {
+              setCurrentPage('admin-dashboard');
+              setShowProductTypesList(false);
+            }}
+            onSelectType={(mainType, subType) => {
+              setSelectedProductType(subType);
+              setShowProductTypesList(true);
+              setCurrentPage('admin-products-by-type');
+            }}
+            initialMainType={showProductTypesList ? 'digital' : undefined}
+          />
+        )}
+
+        {currentPage === 'admin-products-by-type' && (
+          <ProductsManagerByType
+            storeId={storeId}
+            productType={selectedProductType}
+            onBack={() => setCurrentPage('admin-products-selector')}
           />
         )}
 
