@@ -213,29 +213,13 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
   };
 
   const handleDelete = async (category: Category) => {
-    console.log('handleDelete called for category:', category.name);
     const subcategories = getSubcategories(category.id);
     const confirmMessage = subcategories.length > 0
       ? `Удалить категорию "${category.name}" и все её ${subcategories.length} подкатегории?`
       : `Удалить категорию "${category.name}"?`;
 
-    console.log('Confirm message:', confirmMessage);
-    console.log('webApp available:', !!webApp);
-    console.log('webApp.showConfirm available:', !!webApp?.showConfirm);
-
-    if (webApp?.showConfirm) {
-      console.log('Using webApp.showConfirm');
-      webApp.showConfirm(confirmMessage, async (confirmed) => {
-        console.log('Confirmation result:', confirmed);
-        if (confirmed) {
-          await performDelete(category.id);
-        }
-      });
-    } else {
-      console.log('Using window.confirm');
-      if (window.confirm(confirmMessage)) {
-        await performDelete(category.id);
-      }
+    if (window.confirm(confirmMessage)) {
+      await performDelete(category.id);
     }
   };
 
