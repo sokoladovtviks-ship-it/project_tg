@@ -609,51 +609,55 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <h3 className="font-medium text-gray-900 dark:text-white mb-3">Инструкции</h3>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {languageTab === 'ru' ? 'Текст инструкции' : 'Instruction text'}
-                </label>
-                <textarea
-                  ref={instructionsTextareaRef}
-                  value={languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn}
-                  onChange={(e) => setFormData({ ...formData, [languageTab === 'ru' ? 'instructionsRu' : 'instructionsEn']: e.target.value })}
-                  placeholder={languageTab === 'ru' ? 'Введите инструкцию для покупателя. Вставьте изображение (Ctrl+V) для добавления' : 'Enter instructions for buyer. Paste image (Ctrl+V) to add'}
-                  rows={10}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  Вставьте изображение в это поле (Ctrl+V)
-                </p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {languageTab === 'ru' ? 'Текст инструкции' : 'Instruction text'}
+              </label>
+              <textarea
+                ref={instructionsTextareaRef}
+                value={languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn}
+                onChange={(e) => setFormData({ ...formData, [languageTab === 'ru' ? 'instructionsRu' : 'instructionsEn']: e.target.value })}
+                placeholder={languageTab === 'ru' ? 'Введите инструкцию для покупателя. Вставьте изображение (Ctrl+V) для добавления' : 'Enter instructions for buyer. Paste image (Ctrl+V) to add'}
+                rows={6}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                Вставьте изображение в это поле (Ctrl+V)
+              </p>
 
-                {(languageTab === 'ru' ? formData.instructionsImagesRu : formData.instructionsImagesEn).length > 0 && (
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Изображения
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(languageTab === 'ru' ? formData.instructionsImagesRu : formData.instructionsImagesEn).map((url, index) => (
-                        <div key={index} className="relative">
-                          <img src={url} alt={`Instruction ${index + 1}`} className="w-full h-24 object-cover rounded-lg" />
-                          <button
-                            type="button"
-                            onClick={() => removeInstructionImage(index)}
-                            className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+              {(languageTab === 'ru' ? formData.instructionsImagesRu : formData.instructionsImagesEn).length > 0 && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Изображения
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(languageTab === 'ru' ? formData.instructionsImagesRu : formData.instructionsImagesEn).map((url, index) => (
+                      <div key={index} className="relative">
+                        <img src={url} alt={`Instruction ${index + 1}`} className="w-full h-24 object-cover rounded-lg" />
+                        <button
+                          type="button"
+                          onClick={() => removeInstructionImage(index)}
+                          className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Предпросмотр
-                </label>
-                <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800 min-h-[280px]">
+              <button
+                type="button"
+                onClick={() => setShowInstructionsPreview(!showInstructionsPreview)}
+                className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {showInstructionsPreview ? 'Скрыть предпросмотр' : 'Показать предпросмотр'}
+              </button>
+
+              {showInstructionsPreview && (
+                <div className="mt-3 p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Предпросмотр</h4>
                   {(languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn) || (languageTab === 'ru' ? formData.instructionsImagesRu : formData.instructionsImagesEn).length > 0 ? (
                     <div className="space-y-3">
                       {(languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn) && (
@@ -666,10 +670,10 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500 dark:text-gray-500">Инструкция появится здесь</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-500">Инструкция пуста</p>
                   )}
                 </div>
-              </div>
+              )}
             </div>
 
           </div>
