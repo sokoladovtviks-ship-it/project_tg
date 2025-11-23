@@ -21,9 +21,11 @@ import { StoreSettings } from './pages/StoreSettings';
 import { TelegramManager } from './pages/TelegramManager';
 import { CategoryTypeSelector } from './pages/CategoryTypeSelector';
 import { CategoriesManagerByType } from './pages/CategoriesManagerByType';
+import { SubcategoriesPage } from './pages/SubcategoriesPage';
 
 type Page =
   | 'store'
+  | 'subcategories'
   | 'products'
   | 'product-detail'
   | 'cart'
@@ -44,6 +46,7 @@ type Page =
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('store');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [parentCategoryId, setParentCategoryId] = useState<string>('');
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [storeId, setStoreId] = useState<string | null>(null);
   const [storeType, setStoreType] = useState<'digital' | 'physical'>('digital');
@@ -146,9 +149,31 @@ function App() {
     }
   };
 
-  const handleCategoryClick = (categoryId: string) => {
+  const handleCategoryClick = async (categoryId: string) => {
+    const { data: category } = await supabase
+      .from('categories')
+      .select('parent_category_id')
+      .eq('id', categoryId)
+      .single();
+
+    if (category?.parent_category_id) {
+      setParentCategoryId(category.parent_category_id);
+    }
+
     setSelectedCategoryId(categoryId);
-    setCurrentPage('products');
+
+    const { data: subcategories } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('parent_category_id', categoryId)
+      .eq('is_visible', true)
+      .limit(1);
+
+    if (subcategories && subcategories.length > 0) {
+      setCurrentPage('subcategories');
+    } else {
+      setCurrentPage('products');
+    }
   };
 
   const handleProductClick = (productId: string) => {
@@ -199,10 +224,26 @@ function App() {
           />
         )}
 
+        {currentPage === 'subcategories' && (
+          <SubcategoriesPage
+            parentCategoryId={selectedCategoryId}
+            onBack={() => setCurrentPage('store')}
+            onSubcategoryClick={handleCategoryClick}
+          />
+        )}
+
         {currentPage === 'products' && (
           <ProductsPage
             categoryId={selectedCategoryId}
-            onBack={() => setCurrentPage('store')}
+            onBack={() => {
+              if (parentCategoryId) {
+                setSelectedCategoryId(parentCategoryId);
+                setCurrentPage('subcategories');
+                setParentCategoryId('');
+              } else {
+                setCurrentPage('store');
+              }
+            }}
             onProductClick={handleProductClick}
           />
         )}
