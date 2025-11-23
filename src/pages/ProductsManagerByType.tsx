@@ -37,6 +37,8 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  type InstructionBlock = { type: 'text'; content: string } | { type: 'image'; url: string };
+
   const [languageTab, setLanguageTab] = useState<'ru' | 'en'>('ru');
   const [formData, setFormData] = useState({
     name: '',
@@ -53,6 +55,9 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
     instructionsImages: [] as string[],
     isActive: true,
   });
+  const [instructionBlocksRu, setInstructionBlocksRu] = useState<InstructionBlock[]>([]);
+  const [instructionBlocksEn, setInstructionBlocksEn] = useState<InstructionBlock[]>([]);
+  const [currentTextInput, setCurrentTextInput] = useState('');
   const [accountFormData, setAccountFormData] = useState({
     accountLogin: '',
     accountPassword: '',
@@ -66,9 +71,53 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   const [showAccountValidation, setShowAccountValidation] = useState(false);
   const [showInstructionsPreview, setShowInstructionsPreview] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const instructionImageInputRef = useRef<HTMLInputElement>(null);
   const instructionsTextareaRef = useRef<HTMLTextAreaElement>(null);
   const { webApp } = useTelegram();
+
+  const getCurrentBlocks = () => languageTab === 'ru' ? instructionBlocksRu : instructionBlocksEn;
+  const setCurrentBlocks = (blocks: InstructionBlock[]) => {
+    if (languageTab === 'ru') {
+      setInstructionBlocksRu(blocks);
+    } else {
+      setInstructionBlocksEn(blocks);
+    }
+  };
+
+  const addTextBlock = () => {
+    if (!currentTextInput.trim()) return;
+    const blocks = getCurrentBlocks();
+    setCurrentBlocks([...blocks, { type: 'text', content: currentTextInput }]);
+    setCurrentTextInput('');
+  };
+
+  const addImageBlock = async (file: File) => {
+    const url = await uploadImage(file);
+    if (url) {
+      const blocks = getCurrentBlocks();
+      setCurrentBlocks([...blocks, { type: 'image', url }]);
+    }
+  };
+
+  const removeBlock = (index: number) => {
+    const blocks = getCurrentBlocks();
+    setCurrentBlocks(blocks.filter((_, i) => i !== index));
+  };
+
+  const moveBlockUp = (index: number) => {
+    if (index === 0) return;
+    const blocks = getCurrentBlocks();
+    const newBlocks = [...blocks];
+    [newBlocks[index - 1], newBlocks[index]] = [newBlocks[index], newBlocks[index - 1]];
+    setCurrentBlocks(newBlocks);
+  };
+
+  const moveBlockDown = (index: number) => {
+    const blocks = getCurrentBlocks();
+    if (index === blocks.length - 1) return;
+    const newBlocks = [...blocks];
+    [newBlocks[index], newBlocks[index + 1]] = [newBlocks[index + 1], newBlocks[index]];
+    setCurrentBlocks(newBlocks);
+  };
 
   useEffect(() => {
     loadData();
@@ -89,11 +138,11 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
           e.preventDefault();
           const file = items[i].getAsFile();
           if (file) {
-            const url = await uploadImage(file);
-            if (url) {
-              if (isInstructionsTextarea) {
-                setFormData(prev => ({ ...prev, instructionsImages: [...prev.instructionsImages, url] }));
-              } else {
+            if (isInstructionsTextarea) {
+              await addImageBlock(file);
+            } else {
+              const url = await uploadImage(file);
+              if (url) {
                 setFormData(prev => ({ ...prev, imagesUrls: [...prev.imagesUrls, url] }));
               }
             }
@@ -104,7 +153,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
 
     document.addEventListener('paste', handlePaste);
     return () => document.removeEventListener('paste', handlePaste);
-  }, [showModal]);
+  }, [showModal, languageTab, instructionBlocksRu, instructionBlocksEn]);
 
   const loadData = async () => {
     try {
@@ -173,6 +222,8 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
         instructionsImages: [],
         isActive: product.is_active,
       });
+      setInstructionBlocksRu([]);
+      setInstructionBlocksEn([]);
     } else {
       setEditingProduct(null);
       setFormData({
@@ -190,7 +241,10 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
         instructionsImages: [],
         isActive: true,
       });
+      setInstructionBlocksRu([]);
+      setInstructionBlocksEn([]);
     }
+    setCurrentTextInput('');
     setShowModal(true);
   };
 
@@ -340,26 +394,10 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
     }
   };
 
-  const handleInstructionImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const url = await uploadImage(file);
-    if (url) {
-      setFormData({ ...formData, instructionsImages: [...formData.instructionsImages, url] });
-    }
-  };
-
   const removeImage = (index: number) => {
     const newImages = [...formData.imagesUrls];
     newImages.splice(index, 1);
     setFormData({ ...formData, imagesUrls: newImages });
-  };
-
-  const removeInstructionImage = (index: number) => {
-    const newImages = [...formData.instructionsImages];
-    newImages.splice(index, 1);
-    setFormData({ ...formData, instructionsImages: newImages });
   };
 
   if (loading) return <Loading />;
@@ -627,67 +665,99 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {languageTab === 'ru' ? 'Инструкции (русский)' : 'Instructions (English)'}
+                Добавить текст
               </label>
-              <textarea
-                ref={instructionsTextareaRef}
-                value={languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn}
-                onChange={(e) => setFormData({ ...formData, [languageTab === 'ru' ? 'instructionsRu' : 'instructionsEn']: e.target.value })}
-                placeholder={languageTab === 'ru' ? 'Инструкции для покупателя. Вставьте изображение (Ctrl+V) для добавления' : 'Instructions for buyer. Paste image (Ctrl+V) to add'}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-              />
+              <div className="flex gap-2">
+                <textarea
+                  ref={instructionsTextareaRef}
+                  value={currentTextInput}
+                  onChange={(e) => setCurrentTextInput(e.target.value)}
+                  placeholder="Введите текст инструкции или вставьте изображение (Ctrl+V)"
+                  rows={3}
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                />
+                <button
+                  type="button"
+                  onClick={addTextBlock}
+                  disabled={!currentTextInput.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed h-fit"
+                >
+                  Добавить
+                </button>
+              </div>
               <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                Вставьте изображение в это поле (Ctrl+V) для добавления в инструкцию
+                Введите текст и нажмите "Добавить" или вставьте изображение (Ctrl+V) прямо в поле
               </p>
             </div>
 
-            {formData.instructionsImages.length > 0 && (
-              <div className="mt-3">
+            {getCurrentBlocks().length > 0 && (
+              <div className="mt-4 space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Изображения к инструкциям
+                  Блоки инструкции
                 </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {formData.instructionsImages.map((url, index) => (
-                    <div key={index} className="relative">
-                      <img src={url} alt={`Instruction ${index + 1}`} className="w-full h-24 object-cover rounded-lg" />
+                {getCurrentBlocks().map((block, index) => (
+                  <div key={index} className="flex items-start gap-2 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700">
+                    <div className="flex-1">
+                      {block.type === 'text' ? (
+                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{block.content}</p>
+                      ) : (
+                        <img src={block.url} alt={`Block ${index + 1}`} className="w-full rounded-lg" />
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1">
                       <button
-                        onClick={() => removeInstructionImage(index)}
-                        className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
+                        type="button"
+                        onClick={() => moveBlockUp(index)}
+                        disabled={index === 0}
+                        className="p-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Вверх"
                       >
-                        <X className="w-3 h-3" />
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveBlockDown(index)}
+                        disabled={index === getCurrentBlocks().length - 1}
+                        className="p-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Вниз"
+                      >
+                        ▼
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeBlock(index)}
+                        className="p-1 text-red-600 hover:text-red-700"
+                        title="Удалить"
+                      >
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             )}
 
             {showInstructionsPreview && (
               <div className="mt-4 p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800">
                 <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Предпросмотр</h4>
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                    {languageTab === 'ru' ? formData.instructionsRu || 'Текст инструкции появится здесь' : formData.instructionsEn || 'Instruction text will appear here'}
-                  </p>
-                  {formData.instructionsImages.length > 0 && (
-                    <div className="space-y-2 mt-3">
-                      {formData.instructionsImages.map((url, index) => (
-                        <img key={index} src={url} alt={`Preview ${index + 1}`} className="w-full rounded-lg" />
-                      ))}
-                    </div>
-                  )}
-                </div>
+                {getCurrentBlocks().length > 0 ? (
+                  <div className="space-y-3">
+                    {getCurrentBlocks().map((block, index) => (
+                      <div key={index}>
+                        {block.type === 'text' ? (
+                          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{block.content}</p>
+                        ) : (
+                          <img src={block.url} alt={`Preview ${index + 1}`} className="w-full rounded-lg" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 dark:text-gray-500">Инструкция пуста</p>
+                )}
               </div>
             )}
 
-            <input
-              ref={instructionImageInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleInstructionImageUpload}
-            />
           </div>
 
           <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
