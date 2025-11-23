@@ -10,6 +10,7 @@ import { ProductsPage } from './pages/ProductsPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
 import { CartPage } from './pages/CartPage';
 import { CheckoutPage } from './pages/CheckoutPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { CategoriesManager } from './pages/CategoriesManager';
 import { ProductsManager } from './pages/ProductsManager';
@@ -141,14 +142,15 @@ function App() {
   };
 
   const handleBottomNavClick = (page: 'home' | 'catalog' | 'search' | 'cart' | 'profile') => {
-    const pageMap: Record<string, Page> = {
-      home: 'store',
-      catalog: 'store',
-      search: 'search',
-      cart: 'cart',
-      profile: 'profile',
-    };
-    setCurrentPage(pageMap[page]);
+    if (page === 'catalog' || page === 'home') {
+      setCurrentPage('store');
+    } else if (page === 'search') {
+      setCurrentPage('search');
+    } else if (page === 'cart') {
+      setCurrentPage('cart');
+    } else if (page === 'profile') {
+      setCurrentPage('profile');
+    }
   };
 
   const getCurrentBottomNavPage = (): 'home' | 'catalog' | 'search' | 'cart' | 'profile' => {
@@ -208,16 +210,10 @@ function App() {
         )}
 
         {currentPage === 'profile' && (
-          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
-            <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 shadow-sm">
-              <div className="flex items-center gap-3 px-4 py-3">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Профиль</h1>
-              </div>
-            </div>
-            <div className="p-4 text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400">Страница профиля в разработке</p>
-            </div>
-          </div>
+          <ProfilePage
+            onNavigateToOrders={() => setCurrentPage('admin-orders')}
+            onNavigateToCart={() => setCurrentPage('cart')}
+          />
         )}
 
         {currentPage === 'checkout' && (
