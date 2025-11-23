@@ -683,9 +683,6 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
 
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
             <h3 className="font-medium text-gray-900 dark:text-white mb-3">Данные пользователю после покупки</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              Логин : Пароль : Почта : Пароль от почты
-            </p>
 
             <div className="flex items-center justify-between mb-3">
               <button
@@ -704,7 +701,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
               <button
                 type="button"
                 onClick={() => {
-                  if (currentAccountIndex === accounts.length - 1) {
+                  if (currentAccountIndex === accounts.length - 1 || accounts.length === 0) {
                     setAccounts([...accounts, { login: '', password: '', email: '', emailPassword: '' }]);
                     setCurrentAccountIndex(accounts.length);
                   } else {
@@ -724,7 +721,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
                   setAccounts([{ login: '', password: '', email: '', emailPassword: '' }]);
                   setCurrentAccountIndex(0);
                 }}
-                className="w-full py-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 transition-colors"
+                className="w-full py-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 transition-colors"
               >
                 + Добавить первый аккаунт
               </button>
@@ -737,42 +734,9 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
                     newAccounts[currentAccountIndex] = { ...newAccounts[currentAccountIndex], login: e.target.value };
                     setAccounts(newAccounts);
                   }}
-                  placeholder="Логин"
-                  rows={1}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-                />
-                <textarea
-                  value={accounts[currentAccountIndex]?.password || ''}
-                  onChange={(e) => {
-                    const newAccounts = [...accounts];
-                    newAccounts[currentAccountIndex] = { ...newAccounts[currentAccountIndex], password: e.target.value };
-                    setAccounts(newAccounts);
-                  }}
-                  placeholder="Пароль"
-                  rows={1}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-                />
-                <textarea
-                  value={accounts[currentAccountIndex]?.email || ''}
-                  onChange={(e) => {
-                    const newAccounts = [...accounts];
-                    newAccounts[currentAccountIndex] = { ...newAccounts[currentAccountIndex], email: e.target.value };
-                    setAccounts(newAccounts);
-                  }}
-                  placeholder="Почта"
-                  rows={1}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-                />
-                <textarea
-                  value={accounts[currentAccountIndex]?.emailPassword || ''}
-                  onChange={(e) => {
-                    const newAccounts = [...accounts];
-                    newAccounts[currentAccountIndex] = { ...newAccounts[currentAccountIndex], emailPassword: e.target.value };
-                    setAccounts(newAccounts);
-                  }}
-                  placeholder="Пароль от почты"
-                  rows={1}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                  placeholder="Введите данные для аккаунта"
+                  rows={10}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-y"
                 />
 
                 <button
