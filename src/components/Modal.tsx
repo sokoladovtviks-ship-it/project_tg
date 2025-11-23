@@ -25,9 +25,9 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalPr
 
   const sizes = {
     sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
   };
 
   return (
@@ -50,7 +50,7 @@ export const Modal = ({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             </button>
           </div>
         )}
-        <div className="px-6 py-4 overflow-y-auto flex-1">{children}</div>
+        <div className="px-6 py-4 overflow-y-auto flex-1 overflow-x-hidden">{children}</div>
       </div>
     </div>
   );

@@ -561,7 +561,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
         onClose={() => setShowModal(false)}
         title={editingProduct ? 'Редактировать товар' : 'Новый товар'}
       >
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => setLanguageTab('ru')}
