@@ -56,10 +56,14 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   const [accountFormData, setAccountFormData] = useState({
     accountLogin: '',
     accountPassword: '',
+    accountEmail: '',
+    accountEmailPassword: '',
   });
   const [imageUrl, setImageUrl] = useState('');
   const [instructionImageUrl, setInstructionImageUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [showValidation, setShowValidation] = useState(false);
+  const [showAccountValidation, setShowAccountValidation] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const instructionImageInputRef = useRef<HTMLInputElement>(null);
   const { webApp } = useTelegram();
@@ -117,6 +121,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   };
 
   const openModal = (product?: Product) => {
+    setShowValidation(false);
     if (product) {
       setEditingProduct(product);
       setFormData({
@@ -156,6 +161,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   };
 
   const openAccountsModal = (productId: string) => {
+    setShowAccountValidation(false);
     setSelectedProductId(productId);
     setShowAccountsModal(true);
   };
@@ -163,9 +169,10 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   const handleSaveAccount = async () => {
     if (!selectedProductId) return;
 
+    setShowAccountValidation(true);
+
     try {
       if (!accountFormData.accountLogin.trim() || !accountFormData.accountPassword.trim()) {
-        alert('Заполните логин и пароль');
         return;
       }
 
@@ -173,12 +180,15 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
         product_id: selectedProductId,
         account_login: accountFormData.accountLogin,
         account_password: accountFormData.accountPassword,
+        account_email: accountFormData.accountEmail || null,
+        account_email_password: accountFormData.accountEmailPassword || null,
       }]);
 
       if (error) throw error;
 
       alert('Аккаунт добавлен');
-      setAccountFormData({ accountLogin: '', accountPassword: '' });
+      setAccountFormData({ accountLogin: '', accountPassword: '', accountEmail: '', accountEmailPassword: '' });
+      setShowAccountValidation(false);
       loadData();
     } catch (error) {
       console.error('Error saving account:', error);
@@ -202,9 +212,10 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   };
 
   const handleSave = async () => {
+    setShowValidation(true);
+
     try {
       if (!formData.name.trim() || !formData.price) {
-        alert('Заполните название и цену');
         return;
       }
 
@@ -238,6 +249,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
         alert('Товар создан');
       }
 
+      setShowValidation(false);
       setShowModal(false);
       loadData();
     } catch (error) {
@@ -423,7 +435,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="Название товара"
-            className={!formData.name.trim() ? 'border-red-500 focus:ring-red-500' : ''}
+            className={showValidation && !formData.name.trim() ? 'border-red-500 focus:ring-red-500' : ''}
           />
 
           <Textarea
@@ -458,7 +470,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
             value={formData.price}
             onChange={(e) => setFormData({ ...formData, price: e.target.value })}
             placeholder="0"
-            className={!formData.price ? 'border-red-500 focus:ring-red-500' : ''}
+            className={showValidation && !formData.price ? 'border-red-500 focus:ring-red-500' : ''}
           />
 
           <div>
@@ -525,7 +537,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
             value={accountFormData.accountLogin}
             onChange={(e) => setAccountFormData({ ...accountFormData, accountLogin: e.target.value })}
             placeholder="Логин аккаунта"
-            className={!accountFormData.accountLogin.trim() ? 'border-red-500 focus:ring-red-500' : ''}
+            className={showAccountValidation && !accountFormData.accountLogin.trim() ? 'border-red-500 focus:ring-red-500' : ''}
           />
 
           <Input
@@ -533,7 +545,23 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
             value={accountFormData.accountPassword}
             onChange={(e) => setAccountFormData({ ...accountFormData, accountPassword: e.target.value })}
             placeholder="Пароль аккаунта"
-            className={!accountFormData.accountPassword.trim() ? 'border-red-500 focus:ring-red-500' : ''}
+            className={showAccountValidation && !accountFormData.accountPassword.trim() ? 'border-red-500 focus:ring-red-500' : ''}
+          />
+
+          <Input
+            label="Email (необязательно)"
+            type="email"
+            value={accountFormData.accountEmail}
+            onChange={(e) => setAccountFormData({ ...accountFormData, accountEmail: e.target.value })}
+            placeholder="Email аккаунта"
+          />
+
+          <Input
+            label="Пароль от Email (необязательно)"
+            type="password"
+            value={accountFormData.accountEmailPassword}
+            onChange={(e) => setAccountFormData({ ...accountFormData, accountEmailPassword: e.target.value })}
+            placeholder="Пароль от email"
           />
 
           <Button onClick={handleSaveAccount} className="w-full">
@@ -559,6 +587,11 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {account.account_password}
                         </p>
+                        {account.account_email && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Email: {account.account_email}
+                          </p>
+                        )}
                       </div>
                       <Button
                         variant="secondary"
@@ -577,7 +610,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
           <Button variant="secondary" onClick={() => {
             setShowAccountsModal(false);
             setSelectedProductId(null);
-            setAccountFormData({ accountLogin: '', accountPassword: '' });
+            setAccountFormData({ accountLogin: '', accountPassword: '', accountEmail: '', accountEmailPassword: '' });
           }} className="w-full">
             Закрыть
           </Button>
