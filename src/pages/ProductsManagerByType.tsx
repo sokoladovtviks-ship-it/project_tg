@@ -64,8 +64,10 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   const [uploading, setUploading] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
   const [showAccountValidation, setShowAccountValidation] = useState(false);
+  const [showInstructionsPreview, setShowInstructionsPreview] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const instructionImageInputRef = useRef<HTMLInputElement>(null);
+  const instructionsTextareaRef = useRef<HTMLTextAreaElement>(null);
   const { webApp } = useTelegram();
 
   useEffect(() => {
@@ -79,6 +81,9 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
       const items = e.clipboardData?.items;
       if (!items) return;
 
+      const activeElement = document.activeElement;
+      const isInstructionsTextarea = activeElement === instructionsTextareaRef.current;
+
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
           e.preventDefault();
@@ -86,7 +91,11 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
           if (file) {
             const url = await uploadImage(file);
             if (url) {
-              setFormData(prev => ({ ...prev, imagesUrls: [...prev.imagesUrls, url] }));
+              if (isInstructionsTextarea) {
+                setFormData(prev => ({ ...prev, instructionsImages: [...prev.instructionsImages, url] }));
+              } else {
+                setFormData(prev => ({ ...prev, imagesUrls: [...prev.imagesUrls, url] }));
+              }
             }
           }
         }
@@ -305,11 +314,11 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
       const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `products/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage.from('store-images').upload(filePath, file);
+      const { error: uploadError } = await supabase.storage.from('store-assets').upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data } = supabase.storage.from('store-images').getPublicUrl(filePath);
+      const { data } = supabase.storage.from('store-assets').getPublicUrl(filePath);
 
       return data.publicUrl;
     } catch (error) {
@@ -605,64 +614,80 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
           </div>
 
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-            <h3 className="font-medium text-gray-900 dark:text-white mb-3">Инструкции</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium text-gray-900 dark:text-white">Инструкции</h3>
+              <button
+                type="button"
+                onClick={() => setShowInstructionsPreview(!showInstructionsPreview)}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {showInstructionsPreview ? 'Скрыть предпросмотр' : 'Предпросмотр'}
+              </button>
+            </div>
 
-            {languageTab === 'ru' ? (
-              <Textarea
-                label="Инструкции (русский)"
-                value={formData.instructionsRu}
-                onChange={(e) => setFormData({ ...formData, instructionsRu: e.target.value })}
-                placeholder="Инструкции для покупателя"
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {languageTab === 'ru' ? 'Инструкции (русский)' : 'Instructions (English)'}
+              </label>
+              <textarea
+                ref={instructionsTextareaRef}
+                value={languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn}
+                onChange={(e) => setFormData({ ...formData, [languageTab === 'ru' ? 'instructionsRu' : 'instructionsEn']: e.target.value })}
+                placeholder={languageTab === 'ru' ? 'Инструкции для покупателя. Вставьте изображение (Ctrl+V) для добавления' : 'Instructions for buyer. Paste image (Ctrl+V) to add'}
                 rows={4}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
               />
-            ) : (
-              <Textarea
-                label="Instructions (English)"
-                value={formData.instructionsEn}
-                onChange={(e) => setFormData({ ...formData, instructionsEn: e.target.value })}
-                placeholder="Instructions for buyer"
-                rows={4}
-              />
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                Вставьте изображение в это поле (Ctrl+V) для добавления в инструкцию
+              </p>
+            </div>
+
+            {formData.instructionsImages.length > 0 && (
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Изображения к инструкциям
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {formData.instructionsImages.map((url, index) => (
+                    <div key={index} className="relative">
+                      <img src={url} alt={`Instruction ${index + 1}`} className="w-full h-24 object-cover rounded-lg" />
+                      <button
+                        onClick={() => removeInstructionImage(index)}
+                        className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
-            <div className="mt-3">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Изображения к инструкциям
-              </label>
-              <div className="grid grid-cols-3 gap-2 mb-2">
-                {formData.instructionsImages.map((url, index) => (
-                  <div key={index} className="relative">
-                    <img src={url} alt={`Instruction ${index + 1}`} className="w-full h-24 object-cover rounded-lg" />
-                    <button
-                      onClick={() => removeInstructionImage(index)}
-                      className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
+            {showInstructionsPreview && (
+              <div className="mt-4 p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Предпросмотр</h4>
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                    {languageTab === 'ru' ? formData.instructionsRu || 'Текст инструкции появится здесь' : formData.instructionsEn || 'Instruction text will appear here'}
+                  </p>
+                  {formData.instructionsImages.length > 0 && (
+                    <div className="space-y-2 mt-3">
+                      {formData.instructionsImages.map((url, index) => (
+                        <img key={index} src={url} alt={`Preview ${index + 1}`} className="w-full rounded-lg" />
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              <input
-                ref={instructionImageInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleInstructionImageUpload}
-              />
-              <div
-                onClick={() => instructionImageInputRef.current?.click()}
-                className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors"
-              >
-                {uploading ? (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Загрузка...</p>
-                ) : (
-                  <>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">+ Добавить изображение</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">или нажмите Ctrl+V</p>
-                  </>
-                )}
-              </div>
-            </div>
+            )}
+
+            <input
+              ref={instructionImageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleInstructionImageUpload}
+            />
           </div>
 
           <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
