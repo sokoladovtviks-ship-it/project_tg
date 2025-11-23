@@ -12,13 +12,14 @@ import { CartPage } from './pages/CartPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AdminDashboard } from './pages/AdminDashboard';
-import { CategoriesManager } from './pages/CategoriesManager';
-import { ProductsManager } from './pages/ProductsManager';
-import { OrdersManager } from './pages/OrdersManager';
+import { CategoriesManagerNew } from './pages/CategoriesManagerNew';
+import { ProductsManagerEnhanced } from './pages/ProductsManagerEnhanced';
+import { OrdersManagerEnhanced } from './pages/OrdersManagerEnhanced';
 import { PaymentMethodsManager } from './pages/PaymentMethodsManager';
 import { DeliveryMethodsManager } from './pages/DeliveryMethodsManager';
 import { StoreSettings } from './pages/StoreSettings';
 import { TelegramManager } from './pages/TelegramManager';
+import { StoreSelector } from './pages/StoreSelector';
 
 type Page =
   | 'store'
@@ -29,6 +30,8 @@ type Page =
   | 'search'
   | 'profile'
   | 'admin-dashboard'
+  | 'admin-categories-selector'
+  | 'admin-products-selector'
   | 'admin-categories'
   | 'admin-products'
   | 'admin-orders'
@@ -42,6 +45,9 @@ function App() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [storeId, setStoreId] = useState<string | null>(null);
+  const [storeType, setStoreType] = useState<'digital' | 'physical'>('digital');
+  const [selectedManagerStoreId, setSelectedManagerStoreId] = useState<string>('');
+  const [selectedManagerType, setSelectedManagerType] = useState<'digital' | 'physical'>('digital');
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const { user, webApp } = useTelegram();
@@ -99,6 +105,7 @@ function App() {
         }
       } else {
         setStoreId(store.id);
+        setStoreType(store.store_type || 'digital');
 
         if (user?.id) {
           const { data: adminData, error: adminError } = await supabase
@@ -229,8 +236,8 @@ function App() {
             storeId={storeId}
             onNavigate={(page) => {
               const pageMap: Record<string, Page> = {
-                categories: 'admin-categories',
-                products: 'admin-products',
+                categories: 'admin-categories-selector',
+                products: 'admin-products-selector',
                 orders: 'admin-orders',
                 payments: 'admin-payments',
                 deliveries: 'admin-deliveries',
@@ -243,22 +250,48 @@ function App() {
           />
         )}
 
-        {currentPage === 'admin-categories' && (
-          <CategoriesManager
-            storeId={storeId}
+        {currentPage === 'admin-categories-selector' && (
+          <StoreSelector
+            title="Категории"
             onBack={() => setCurrentPage('admin-dashboard')}
+            onSelect={(selectedStoreId, selectedType) => {
+              setSelectedManagerStoreId(selectedStoreId);
+              setSelectedManagerType(selectedType);
+              setCurrentPage('admin-categories');
+            }}
+          />
+        )}
+
+        {currentPage === 'admin-products-selector' && (
+          <StoreSelector
+            title="Товары"
+            onBack={() => setCurrentPage('admin-dashboard')}
+            onSelect={(selectedStoreId, selectedType) => {
+              setSelectedManagerStoreId(selectedStoreId);
+              setSelectedManagerType(selectedType);
+              setCurrentPage('admin-products');
+            }}
+          />
+        )}
+
+        {currentPage === 'admin-categories' && (
+          <CategoriesManagerNew
+            storeId={selectedManagerStoreId}
+            storeType={selectedManagerType}
+            onBack={() => setCurrentPage('admin-categories-selector')}
           />
         )}
 
         {currentPage === 'admin-products' && (
-          <ProductsManager
-            storeId={storeId}
-            onBack={() => setCurrentPage('admin-dashboard')}
+          <ProductsManagerEnhanced
+            storeId={selectedManagerStoreId}
+            storeType={selectedManagerType}
+            onBack={() => setCurrentPage('admin-products-selector')}
           />
         )}
 
         {currentPage === 'admin-orders' && (
-          <OrdersManager
+          <OrdersManagerEnhanced
             storeId={storeId}
             onBack={() => setCurrentPage('admin-dashboard')}
           />
