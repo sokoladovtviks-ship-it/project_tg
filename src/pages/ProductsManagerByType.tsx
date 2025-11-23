@@ -245,14 +245,17 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    const url = await uploadImage(file);
-    if (url) {
+    const uploadPromises = Array.from(files).map(file => uploadImage(file));
+    const urls = await Promise.all(uploadPromises);
+    const validUrls = urls.filter((url): url is string => url !== null);
+
+    if (validUrls.length > 0) {
       setFormData({
         ...formData,
-        imagesUrls: [...formData.imagesUrls, url],
+        imagesUrls: [...formData.imagesUrls, ...validUrls],
       });
     }
     if (imageInputRef.current) {
@@ -655,53 +658,67 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               Изображения товара
             </label>
-            <div className="flex gap-2 mb-2">
+            <div className="space-y-3">
               <input
                 ref={imageInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleImageUpload}
                 className="hidden"
               />
-              <Button
-                onClick={() => imageInputRef.current?.click()}
-                size="sm"
-                disabled={uploading}
-                className="whitespace-nowrap"
-              >
-                <Upload className="w-4 h-4 mr-1" />
-                {uploading ? 'Загрузка...' : 'Загрузить'}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={uploading}
+                  className="flex-1"
+                >
+                  <Upload className="w-5 h-5 mr-2" />
+                  {uploading ? 'Загрузка...' : 'Загрузить фото'}
+                </Button>
+              </div>
               <Input
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
                 onPaste={(e) => handlePasteImage(e, 'product')}
-                placeholder="или вставьте URL / Ctrl+V для изображения"
-                className="flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && imageUrl.trim()) {
+                    addImage();
+                  }
+                }}
+                placeholder="Или вставьте URL / Ctrl+V для изображения и нажмите Enter"
               />
-              <Button onClick={addImage} size="sm" disabled={!imageUrl.trim()}>
-                <Plus className="w-4 h-4" />
-              </Button>
+              {formData.imagesUrls.length > 0 && (
+                <div className="grid grid-cols-3 gap-3 mt-3">
+                  {formData.imagesUrls.map((url, index) => (
+                    <div key={index} className="relative group aspect-square">
+                      <img
+                        src={url}
+                        alt={`Фото ${index + 1}`}
+                        className="w-full h-full object-cover rounded-lg border-2 border-gray-200 dark:border-gray-600"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '';
+                          target.alt = 'Ошибка загрузки';
+                        }}
+                      />
+                      <button
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 p-1.5 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <div className="absolute bottom-1 left-1 px-2 py-0.5 bg-black/60 text-white text-xs rounded">
+                        {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            {formData.imagesUrls.length > 0 && (
-              <div className="space-y-2">
-                {formData.imagesUrls.map((url, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                    <img src={url} alt="" className="w-12 h-12 object-cover rounded" />
-                    <span className="flex-1 text-sm text-gray-600 dark:text-gray-400 truncate">{url}</span>
-                    <button
-                      onClick={() => removeImage(index)}
-                      className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
