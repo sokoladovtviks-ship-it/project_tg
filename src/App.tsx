@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { StoreProvider } from './contexts/StoreContext';
 import { useTelegram } from './hooks/useTelegram';
 import { useTranslation } from './hooks/useTranslation';
 import { supabase } from './lib/supabase';
 import { Loading } from './components/Loading';
 import { BottomNav } from './components/BottomNav';
+import { Button } from './components/Button';
+import { Card } from './components/Card';
 import { StorePage } from './pages/StorePage';
 import { ProductsPage } from './pages/ProductsPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
