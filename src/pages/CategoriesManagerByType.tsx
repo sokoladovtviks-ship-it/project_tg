@@ -212,20 +212,43 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
     }
   };
 
-  const handleDelete = (category: Category) => {
-    webApp?.showConfirm('Удалить категорию?', async (confirmed) => {
-      if (confirmed) {
-        try {
-          const { error } = await supabase.from('categories').delete().eq('id', category.id);
-          if (error) throw error;
-          webApp?.HapticFeedback.notificationOccurred('success');
-          loadCategories();
-        } catch (error) {
-          console.error('Error deleting category:', error);
-          webApp?.showAlert('Ошибка удаления категории');
+  const handleDelete = async (category: Category) => {
+    const subcategories = getSubcategories(category.id);
+    const confirmMessage = subcategories.length > 0
+      ? `Удалить категорию "${category.name}" и все её ${subcategories.length} подкатегории?`
+      : `Удалить категорию "${category.name}"?`;
+
+    if (webApp?.showConfirm) {
+      webApp.showConfirm(confirmMessage, async (confirmed) => {
+        if (confirmed) {
+          await performDelete(category.id);
         }
+      });
+    } else {
+      if (window.confirm(confirmMessage)) {
+        await performDelete(category.id);
       }
-    });
+    }
+  };
+
+  const performDelete = async (categoryId: string) => {
+    try {
+      const { error } = await supabase.from('categories').delete().eq('id', categoryId);
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
+      webApp?.HapticFeedback?.notificationOccurred('success');
+      await loadCategories();
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      const message = error instanceof Error ? error.message : 'Ошибка удаления категории';
+      if (webApp?.showAlert) {
+        webApp.showAlert(message);
+      } else {
+        alert(message);
+      }
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -273,39 +296,44 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
     const subcategories = getSubcategories(category.id);
     const isExpanded = expandedCategories.has(category.id);
     const hasChildren = subcategories.length > 0;
-    const marginLeft = level * 32;
+    const marginLeft = level * 24;
+
+    const iconSize = level === 0 ? 'w-12 h-12 text-3xl' : level === 1 ? 'w-10 h-10 text-2xl' : 'w-8 h-8 text-xl';
+    const titleSize = level === 0 ? 'text-base' : level === 1 ? 'text-sm' : 'text-xs';
+    const padding = level === 0 ? 'p-4' : level === 1 ? 'p-3' : 'p-2.5';
 
     return (
       <div key={category.id}>
-        <Card className="p-4" style={{ marginLeft: `${marginLeft}px` }}>
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3 flex-1">
-              {hasChildren ? (
-                <button
-                  onClick={() => toggleExpanded(category.id)}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-transform"
-                  style={{ transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
-                >
-                  <ChevronDown className="w-5 h-5 text-gray-500" />
-                </button>
-              ) : (
-                <div className="w-7" />
-              )}
+        <Card className={padding} style={{ marginLeft: `${marginLeft}px` }}>
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-2.5 flex-1">
+              <button
+                onClick={() => hasChildren && toggleExpanded(category.id)}
+                className={`p-1 rounded transition-all flex-shrink-0 ${
+                  hasChildren
+                    ? 'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'
+                    : 'opacity-0 pointer-events-none'
+                }`}
+                style={{ transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+                disabled={!hasChildren}
+              >
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              </button>
 
               {category.image_url ? (
-                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0">
+                <div className={`${iconSize.split(' ')[0]} ${iconSize.split(' ')[1]} rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0`}>
                   <img src={category.image_url} alt={category.name} className="w-full h-full object-contain" />
                 </div>
               ) : (
-                <div className="text-3xl flex-shrink-0">{category.icon}</div>
+                <div className={`${iconSize.split(' ')[2]} flex-shrink-0`}>{category.icon}</div>
               )}
 
               <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-gray-900 dark:text-white truncate">{category.name}</h3>
+                <h3 className={`${titleSize} font-medium text-gray-900 dark:text-white truncate`}>{category.name}</h3>
                 {category.name_en && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{category.name_en}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{category.name_en}</p>
                 )}
-                {category.description && (
+                {category.description && level === 0 && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{category.description}</p>
                 )}
                 {!category.is_visible && (
@@ -314,30 +342,30 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
               </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
                 onClick={() => handleToggleVisibility(category)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                className={`relative inline-flex ${level === 0 ? 'h-6 w-11' : 'h-5 w-9'} items-center rounded-full transition-colors ${
                   category.is_visible ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
                 }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    category.is_visible ? 'translate-x-6' : 'translate-x-1'
+                  className={`inline-block ${level === 0 ? 'h-4 w-4' : 'h-3 w-3'} transform rounded-full bg-white transition-transform ${
+                    category.is_visible ? (level === 0 ? 'translate-x-6' : 'translate-x-5') : 'translate-x-1'
                   }`}
                 />
               </button>
               <button
                 onClick={() => handleEdit(category)}
-                className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                className={`${level === 0 ? 'p-2' : 'p-1.5'} rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400`}
               >
-                <Edit2 className="w-5 h-5" />
+                <Edit2 className={level === 0 ? 'w-5 h-5' : 'w-4 h-4'} />
               </button>
               <button
                 onClick={() => handleDelete(category)}
-                className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+                className={`${level === 0 ? 'p-2' : 'p-1.5'} rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400`}
               >
-                <Trash2 className="w-5 h-5" />
+                <Trash2 className={level === 0 ? 'w-5 h-5' : 'w-4 h-4'} />
               </button>
             </div>
           </div>
@@ -345,9 +373,9 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
           {level < 2 && (
             <button
               onClick={() => handleAddSubcategory(category.id)}
-              className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+              className="mt-1.5 text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 ml-6"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
               Добавить подкатегорию
             </button>
           )}
