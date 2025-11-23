@@ -213,14 +213,7 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
   };
 
   const handleDelete = async (category: Category) => {
-    const subcategories = getSubcategories(category.id);
-    const confirmMessage = subcategories.length > 0
-      ? `Удалить категорию "${category.name}" и все её ${subcategories.length} подкатегории?`
-      : `Удалить категорию "${category.name}"?`;
-
-    if (window.confirm(confirmMessage)) {
-      await performDelete(category.id);
-    }
+    await performDelete(category.id);
   };
 
   const performDelete = async (categoryId: string) => {
