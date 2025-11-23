@@ -19,7 +19,8 @@ import { PaymentMethodsManager } from './pages/PaymentMethodsManager';
 import { DeliveryMethodsManager } from './pages/DeliveryMethodsManager';
 import { StoreSettings } from './pages/StoreSettings';
 import { TelegramManager } from './pages/TelegramManager';
-import { StoreSelector } from './pages/StoreSelector';
+import { CategoryTypeSelector } from './pages/CategoryTypeSelector';
+import { CategoriesManagerByType } from './pages/CategoriesManagerByType';
 
 type Page =
   | 'store'
@@ -46,8 +47,7 @@ function App() {
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [storeId, setStoreId] = useState<string | null>(null);
   const [storeType, setStoreType] = useState<'digital' | 'physical'>('digital');
-  const [selectedManagerStoreId, setSelectedManagerStoreId] = useState<string>('');
-  const [selectedManagerType, setSelectedManagerType] = useState<'digital' | 'physical'>('digital');
+  const [selectedCategoryType, setSelectedCategoryType] = useState<string>('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const { user, webApp } = useTelegram();
@@ -237,7 +237,7 @@ function App() {
             onNavigate={(page) => {
               const pageMap: Record<string, Page> = {
                 categories: 'admin-categories-selector',
-                products: 'admin-products-selector',
+                products: 'admin-products',
                 orders: 'admin-orders',
                 payments: 'admin-payments',
                 deliveries: 'admin-deliveries',
@@ -251,42 +251,28 @@ function App() {
         )}
 
         {currentPage === 'admin-categories-selector' && (
-          <StoreSelector
-            title="Категории"
+          <CategoryTypeSelector
             onBack={() => setCurrentPage('admin-dashboard')}
-            onSelect={(selectedStoreId, selectedType) => {
-              setSelectedManagerStoreId(selectedStoreId);
-              setSelectedManagerType(selectedType);
+            onSelectType={(mainType, subType) => {
+              setSelectedCategoryType(subType);
               setCurrentPage('admin-categories');
             }}
           />
         )}
 
-        {currentPage === 'admin-products-selector' && (
-          <StoreSelector
-            title="Товары"
-            onBack={() => setCurrentPage('admin-dashboard')}
-            onSelect={(selectedStoreId, selectedType) => {
-              setSelectedManagerStoreId(selectedStoreId);
-              setSelectedManagerType(selectedType);
-              setCurrentPage('admin-products');
-            }}
-          />
-        )}
-
         {currentPage === 'admin-categories' && (
-          <CategoriesManagerNew
-            storeId={selectedManagerStoreId}
-            storeType={selectedManagerType}
+          <CategoriesManagerByType
+            storeId={storeId}
+            categoryType={selectedCategoryType}
             onBack={() => setCurrentPage('admin-categories-selector')}
           />
         )}
 
         {currentPage === 'admin-products' && (
           <ProductsManagerEnhanced
-            storeId={selectedManagerStoreId}
-            storeType={selectedManagerType}
-            onBack={() => setCurrentPage('admin-products-selector')}
+            storeId={storeId}
+            storeType={storeType}
+            onBack={() => setCurrentPage('admin-dashboard')}
           />
         )}
 
