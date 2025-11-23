@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
-import { TelegramSetup } from '../../components/TelegramSetup';
-import { useTelegram } from '../../hooks/useTelegram';
+import { TelegramSetup } from '../components/TelegramSetup';
+import { useTelegram } from '../hooks/useTelegram';
 import { useEffect } from 'react';
 
 interface TelegramManagerProps {

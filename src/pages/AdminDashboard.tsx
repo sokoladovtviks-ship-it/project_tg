@@ -11,12 +11,12 @@ import {
   Moon,
   MessageCircle,
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
-import { Card } from '../../components/Card';
-import { Loading } from '../../components/Loading';
-import { useTranslation } from '../../hooks/useTranslation';
-import { useTelegram } from '../../hooks/useTelegram';
-import { useTheme } from '../../contexts/ThemeContext';
+import { supabase } from '../lib/supabase';
+import { Card } from '../components/Card';
+import { Loading } from '../components/Loading';
+import { useTranslation } from '../hooks/useTranslation';
+import { useTelegram } from '../hooks/useTelegram';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface AdminDashboardProps {
   storeId: string;

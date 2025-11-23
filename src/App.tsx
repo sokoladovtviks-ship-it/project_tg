@@ -9,14 +9,14 @@ import { ProductsPage } from './pages/ProductsPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
 import { CartPage } from './pages/CartPage';
 import { CheckoutPage } from './pages/CheckoutPage';
-import { AdminDashboard } from './pages/admin/AdminDashboard';
-import { CategoriesManager } from './pages/admin/CategoriesManager';
-import { ProductsManager } from './pages/admin/ProductsManager';
-import { OrdersManager } from './pages/admin/OrdersManager';
-import { PaymentMethodsManager } from './pages/admin/PaymentMethodsManager';
-import { DeliveryMethodsManager } from './pages/admin/DeliveryMethodsManager';
-import { StoreSettings } from './pages/admin/StoreSettings';
-import { TelegramManager } from './pages/admin/TelegramManager';
+import { AdminDashboard } from './pages/AdminDashboard';
+import { CategoriesManager } from './pages/CategoriesManager';
+import { ProductsManager } from './pages/ProductsManager';
+import { OrdersManager } from './pages/OrdersManager';
+import { PaymentMethodsManager } from './pages/PaymentMethodsManager';
+import { DeliveryMethodsManager } from './pages/DeliveryMethodsManager';
+import { StoreSettings } from './pages/StoreSettings';
+import { TelegramManager } from './pages/TelegramManager';
 
 type Page =
   | 'store'

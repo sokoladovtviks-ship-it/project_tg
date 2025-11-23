@@ -1,11 +1,9 @@
-import { config } from '../config';
-
 export class TelegramBot {
   private botToken: string;
   private baseUrl: string;
 
-  constructor() {
-    this.botToken = config.telegram.botToken;
+  constructor(botToken?: string) {
+    this.botToken = botToken || import.meta.env.VITE_TELEGRAM_BOT_TOKEN || '';
     this.baseUrl = `https://api.telegram.org/bot${this.botToken}`;
   }
 

@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Edit2, Trash2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
-import { Database } from '../../lib/database.types';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { Modal } from '../../components/Modal';
-import { Input } from '../../components/Input';
-import { Textarea } from '../../components/Textarea';
-import { Loading } from '../../components/Loading';
-import { useTranslation } from '../../hooks/useTranslation';
-import { useTelegram } from '../../hooks/useTelegram';
+import { supabase } from '../lib/supabase';
+import { Database } from '../lib/database.types';
+import { Button } from '../components/Button';
+import { Card } from '../components/Card';
+import { Modal } from '../components/Modal';
+import { Input } from '../components/Input';
+import { Textarea } from '../components/Textarea';
+import { Loading } from '../components/Loading';
+import { useTranslation } from '../hooks/useTranslation';
+import { useTelegram } from '../hooks/useTelegram';
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Category = Database['public']['Tables']['categories']['Row'];

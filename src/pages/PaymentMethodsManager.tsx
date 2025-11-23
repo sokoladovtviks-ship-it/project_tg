@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Settings, Check } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
-import { Database } from '../../lib/database.types';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { Modal } from '../../components/Modal';
-import { Input } from '../../components/Input';
-import { Loading } from '../../components/Loading';
-import { useTranslation } from '../../hooks/useTranslation';
-import { useTelegram } from '../../hooks/useTelegram';
+import { supabase } from '../lib/supabase';
+import { Database } from '../lib/database.types';
+import { Button } from '../components/Button';
+import { Card } from '../components/Card';
+import { Modal } from '../components/Modal';
+import { Input } from '../components/Input';
+import { Loading } from '../components/Loading';
+import { useTranslation } from '../hooks/useTranslation';
+import { useTelegram } from '../hooks/useTelegram';
 
 type PaymentMethod = Database['public']['Tables']['payment_methods']['Row'];
 
