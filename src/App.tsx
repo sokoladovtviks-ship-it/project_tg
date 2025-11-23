@@ -126,7 +126,19 @@ function App() {
       }
     } catch (error) {
       console.error('Error initializing app:', error);
-      setStoreId('48056e61-c535-4525-a280-cd18ab4cbf65');
+      try {
+        const { data: anyStore } = await supabase
+          .from('stores')
+          .select('id')
+          .limit(1)
+          .maybeSingle();
+
+        if (anyStore) {
+          setStoreId(anyStore.id);
+        }
+      } catch (fallbackError) {
+        console.error('Fallback store fetch error:', fallbackError);
+      }
       setIsAdmin(true);
     } finally {
       setLoading(false);
