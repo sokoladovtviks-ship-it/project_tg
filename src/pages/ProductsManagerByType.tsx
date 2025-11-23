@@ -72,10 +72,49 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   const addInstructionImage = async (file: File) => {
     const url = await uploadImage(file);
     if (url) {
+      const textarea = instructionsTextareaRef.current;
+      if (!textarea) return;
+
+      const cursorPosition = textarea.selectionStart;
+      const textBefore = textarea.value.substring(0, cursorPosition);
+      const textAfter = textarea.value.substring(cursorPosition);
+
       if (languageTab === 'ru') {
-        setFormData(prev => ({ ...prev, instructionsImagesRu: [...prev.instructionsImagesRu, url] }));
+        const newImages = [...formData.instructionsImagesRu, url];
+        const imageMarker = `[Фото ${newImages.length}]`;
+        const newText = textBefore + imageMarker + textAfter;
+
+        setFormData(prev => ({
+          ...prev,
+          instructionsImagesRu: newImages,
+          instructionsRu: newText
+        }));
+
+        setTimeout(() => {
+          if (textarea) {
+            textarea.focus();
+            const newPosition = cursorPosition + imageMarker.length;
+            textarea.setSelectionRange(newPosition, newPosition);
+          }
+        }, 0);
       } else {
-        setFormData(prev => ({ ...prev, instructionsImagesEn: [...prev.instructionsImagesEn, url] }));
+        const newImages = [...formData.instructionsImagesEn, url];
+        const imageMarker = `[Photo ${newImages.length}]`;
+        const newText = textBefore + imageMarker + textAfter;
+
+        setFormData(prev => ({
+          ...prev,
+          instructionsImagesEn: newImages,
+          instructionsEn: newText
+        }));
+
+        setTimeout(() => {
+          if (textarea) {
+            textarea.focus();
+            const newPosition = cursorPosition + imageMarker.length;
+            textarea.setSelectionRange(newPosition, newPosition);
+          }
+        }, 0);
       }
     }
   };
@@ -84,12 +123,81 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
     if (languageTab === 'ru') {
       const newImages = [...formData.instructionsImagesRu];
       newImages.splice(index, 1);
-      setFormData({ ...formData, instructionsImagesRu: newImages });
+
+      let newText = formData.instructionsRu;
+      newText = newText.replace(`[Фото ${index + 1}]`, '');
+
+      for (let i = index + 1; i < formData.instructionsImagesRu.length; i++) {
+        newText = newText.replace(`[Фото ${i + 1}]`, `[Фото ${i}]`);
+      }
+
+      setFormData({ ...formData, instructionsImagesRu: newImages, instructionsRu: newText });
     } else {
       const newImages = [...formData.instructionsImagesEn];
       newImages.splice(index, 1);
-      setFormData({ ...formData, instructionsImagesEn: newImages });
+
+      let newText = formData.instructionsEn;
+      newText = newText.replace(`[Photo ${index + 1}]`, '');
+
+      for (let i = index + 1; i < formData.instructionsImagesEn.length; i++) {
+        newText = newText.replace(`[Photo ${i + 1}]`, `[Photo ${i}]`);
+      }
+
+      setFormData({ ...formData, instructionsImagesEn: newImages, instructionsEn: newText });
     }
+  };
+
+  const renderInstructionsPreview = () => {
+    const text = languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn;
+    const images = languageTab === 'ru' ? formData.instructionsImagesRu : formData.instructionsImagesEn;
+    const photoWord = languageTab === 'ru' ? 'Фото' : 'Photo';
+
+    if (!text && images.length === 0) {
+      return <p className="text-sm text-gray-500 dark:text-gray-500">Инструкция пуста</p>;
+    }
+
+    const parts: (string | { type: 'image'; index: number })[] = [];
+    let lastIndex = 0;
+
+    for (let i = 0; i < images.length; i++) {
+      const marker = `[${photoWord} ${i + 1}]`;
+      const markerIndex = text.indexOf(marker, lastIndex);
+
+      if (markerIndex !== -1) {
+        if (markerIndex > lastIndex) {
+          parts.push(text.substring(lastIndex, markerIndex));
+        }
+        parts.push({ type: 'image', index: i });
+        lastIndex = markerIndex + marker.length;
+      }
+    }
+
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    return (
+      <div className="space-y-3">
+        {parts.map((part, index) => {
+          if (typeof part === 'string') {
+            return part.trim() ? (
+              <p key={index} className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                {part}
+              </p>
+            ) : null;
+          } else {
+            return (
+              <img
+                key={`img-${part.index}`}
+                src={images[part.index]}
+                alt={`${photoWord} ${part.index + 1}`}
+                className="w-full rounded-lg"
+              />
+            );
+          }
+        })}
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -658,20 +766,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
               {showInstructionsPreview && (
                 <div className="mt-3 p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800">
                   <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Предпросмотр</h4>
-                  {(languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn) || (languageTab === 'ru' ? formData.instructionsImagesRu : formData.instructionsImagesEn).length > 0 ? (
-                    <div className="space-y-3">
-                      {(languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn) && (
-                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                          {languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn}
-                        </p>
-                      )}
-                      {(languageTab === 'ru' ? formData.instructionsImagesRu : formData.instructionsImagesEn).map((url, index) => (
-                        <img key={index} src={url} alt={`Preview ${index + 1}`} className="w-full rounded-lg" />
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500 dark:text-gray-500">Инструкция пуста</p>
-                  )}
+                  {renderInstructionsPreview()}
                 </div>
               )}
             </div>
