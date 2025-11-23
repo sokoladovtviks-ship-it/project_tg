@@ -72,6 +72,31 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
     loadData();
   }, [storeId, productType]);
 
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      if (!showModal) return;
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          e.preventDefault();
+          const file = items[i].getAsFile();
+          if (file) {
+            const url = await uploadImage(file);
+            if (url) {
+              setFormData(prev => ({ ...prev, imagesUrls: [...prev.imagesUrls, url] }));
+            }
+          }
+        }
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [showModal]);
+
   const loadData = async () => {
     try {
       const [categoriesResult, productsResult] = await Promise.all([
@@ -521,12 +546,9 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Валюта
               </label>
-              <button
-                onClick={() => setFormData({ ...formData, currency: formData.currency === 'RUB' ? 'USD' : 'RUB' })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-medium"
-              >
-                {formData.currency}
-              </button>
+              <div className="h-[42px] flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white font-medium">
+                RUB
+              </div>
             </div>
           </div>
 
@@ -561,7 +583,10 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
               {uploading ? (
                 <p className="text-sm text-gray-600 dark:text-gray-400">Загрузка...</p>
               ) : (
-                <p className="text-sm text-gray-600 dark:text-gray-400">+ Добавить фото</p>
+                <>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">+ Добавить фото</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">или нажмите Ctrl+V</p>
+                </>
               )}
             </div>
           </div>
@@ -631,7 +656,10 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
                 {uploading ? (
                   <p className="text-sm text-gray-600 dark:text-gray-400">Загрузка...</p>
                 ) : (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">+ Добавить изображение</p>
+                  <>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">+ Добавить изображение</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">или нажмите Ctrl+V</p>
+                  </>
                 )}
               </div>
             </div>
