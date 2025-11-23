@@ -145,8 +145,13 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
 
   const handleSave = async () => {
     try {
-      if (!formData.name.trim() || !formData.categoryId || !formData.price || !formData.accountLogin.trim() || !formData.accountPassword.trim()) {
-        webApp?.showAlert('Заполните все обязательные поля: название, категория, цена, логин и пароль');
+      if (!formData.name.trim() || !formData.price || !formData.accountLogin.trim() || !formData.accountPassword.trim()) {
+        alert('Заполните все обязательные поля: название, цена, логин и пароль');
+        return;
+      }
+
+      if (!formData.categoryId) {
+        alert('Выберите категорию. Без категории товар не будет отображаться в магазине.');
         return;
       }
 
@@ -179,19 +184,19 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
           .eq('id', editingProduct.id);
 
         if (error) throw error;
-        webApp?.showAlert('Товар обновлен');
+        alert('Товар обновлен');
       } else {
         const { error } = await supabase.from('products').insert([productData]);
 
         if (error) throw error;
-        webApp?.showAlert('Товар создан');
+        alert('Товар создан');
       }
 
       setShowModal(false);
       loadData();
     } catch (error) {
       console.error('Error saving product:', error);
-      webApp?.showAlert('Ошибка сохранения товара');
+      alert('Ошибка сохранения товара');
     }
   };
 
@@ -202,11 +207,11 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
       const { error } = await supabase.from('products').delete().eq('id', id);
 
       if (error) throw error;
-      webApp?.showAlert('Товар удален');
+      alert('Товар удален');
       loadData();
     } catch (error) {
       console.error('Error deleting product:', error);
-      webApp?.showAlert('Ошибка удаления товара');
+      alert('Ошибка удаления товара');
     }
   };
 
@@ -237,7 +242,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
       return data.publicUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
-      webApp?.showAlert('Ошибка загрузки изображения');
+      alert('Ошибка загрузки изображения');
       return null;
     } finally {
       setUploading(false);
@@ -625,16 +630,12 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Категория *
+              Категория (рекомендуется)
             </label>
             <select
               value={formData.categoryId}
               onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
-                !formData.categoryId
-                  ? 'border-red-500 dark:border-red-500 focus:ring-red-500'
-                  : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
-              }`}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="">Выберите категорию</option>
               {categories.map((category) => (
@@ -643,6 +644,11 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
                 </option>
               ))}
             </select>
+            {!formData.categoryId && (
+              <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
+                ⚠️ Без категории товар не будет отображаться в магазине
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
