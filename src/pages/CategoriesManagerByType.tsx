@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Edit2, Trash2, Upload, X, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Plus, Edit2, Trash2, Upload, X, ChevronRight, ChevronDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../lib/database.types';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Modal } from '../components/Modal';
 import { Input } from '../components/Input';
+import { Textarea } from '../components/Textarea';
 import { Loading } from '../components/Loading';
 import { useTelegram } from '../hooks/useTelegram';
 
@@ -32,9 +33,12 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
   const [languageTab, setLanguageTab] = useState<'ru' | 'en'>('ru');
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     name: '',
     nameEn: '',
+    description: '',
+    descriptionEn: '',
     icon: '📦',
     imageUrl: '',
   });
@@ -71,6 +75,23 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
 
   const parentCategories = categories.filter(c => !c.parent_category_id);
   const getSubcategories = (parentId: string) => categories.filter(c => c.parent_category_id === parentId);
+  const getCategoryLevel = (categoryId: string): number => {
+    const category = categories.find(c => c.id === categoryId);
+    if (!category || !category.parent_category_id) return 1;
+    return 1 + getCategoryLevel(category.parent_category_id);
+  };
+
+  const toggleExpanded = (categoryId: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
@@ -84,6 +105,8 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
         const updateData: any = {
           name: formData.name,
           name_en: formData.nameEn || null,
+          description: formData.description || null,
+          description_en: formData.descriptionEn || null,
           parent_category_id: selectedParentId || null,
         };
 
@@ -106,6 +129,8 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
           store_id: storeId,
           name: formData.name,
           name_en: formData.nameEn || null,
+          description: formData.description || null,
+          description_en: formData.descriptionEn || null,
           category_type: categoryType,
           parent_category_id: selectedParentId || null,
           order_position: categories.length,
@@ -136,7 +161,7 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
     setShowModal(false);
     setEditingCategory(null);
     setSelectedParentId(null);
-    setFormData({ name: '', nameEn: '', icon: '📦', imageUrl: '' });
+    setFormData({ name: '', nameEn: '', description: '', descriptionEn: '', icon: '📦', imageUrl: '' });
     setUseCustomImage(false);
     setLanguageTab('ru');
   };
@@ -147,6 +172,8 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
     setFormData({
       name: category.name,
       nameEn: category.name_en || '',
+      description: category.description || '',
+      descriptionEn: category.description_en || '',
       icon: category.icon || '📦',
       imageUrl: category.image_url || '',
     });
@@ -156,9 +183,15 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
   };
 
   const handleAddSubcategory = (parentId: string) => {
+    const level = getCategoryLevel(parentId);
+    if (level >= 3) {
+      webApp?.showAlert('Максимальная глубина вложенности - 3 уровня');
+      return;
+    }
+
     setSelectedParentId(parentId);
     setEditingCategory(null);
-    setFormData({ name: '', nameEn: '', icon: '📦', imageUrl: '' });
+    setFormData({ name: '', nameEn: '', description: '', descriptionEn: '', icon: '📦', imageUrl: '' });
     setUseCustomImage(false);
     setShowModal(true);
   };
@@ -236,6 +269,99 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
     }
   };
 
+  const renderCategory = (category: Category, level: number = 0) => {
+    const subcategories = getSubcategories(category.id);
+    const isExpanded = expandedCategories.has(category.id);
+    const hasChildren = subcategories.length > 0;
+    const marginLeft = level * 32;
+
+    return (
+      <div key={category.id}>
+        <Card className="p-4" style={{ marginLeft: `${marginLeft}px` }}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3 flex-1">
+              {hasChildren ? (
+                <button
+                  onClick={() => toggleExpanded(category.id)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-transform"
+                  style={{ transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+                >
+                  <ChevronDown className="w-5 h-5 text-gray-500" />
+                </button>
+              ) : (
+                <div className="w-7" />
+              )}
+
+              {category.image_url ? (
+                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0">
+                  <img src={category.image_url} alt={category.name} className="w-full h-full object-contain" />
+                </div>
+              ) : (
+                <div className="text-3xl flex-shrink-0">{category.icon}</div>
+              )}
+
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-gray-900 dark:text-white truncate">{category.name}</h3>
+                {category.name_en && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{category.name_en}</p>
+                )}
+                {category.description && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{category.description}</p>
+                )}
+                {!category.is_visible && (
+                  <span className="inline-block mt-1 text-xs text-gray-500 dark:text-gray-400">Скрыта</span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => handleToggleVisibility(category)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  category.is_visible ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    category.is_visible ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <button
+                onClick={() => handleEdit(category)}
+                className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+              >
+                <Edit2 className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => handleDelete(category)}
+                className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {level < 2 && (
+            <button
+              onClick={() => handleAddSubcategory(category.id)}
+              className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+            >
+              <Plus className="w-4 h-4" />
+              Добавить подкатегорию
+            </button>
+          )}
+        </Card>
+
+        {hasChildren && isExpanded && (
+          <div className="mt-2 space-y-2">
+            {subcategories.map((sub) => renderCategory(sub, level + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (loading) return <Loading />;
 
   return (
@@ -267,115 +393,7 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
           </div>
         ) : (
           <div className="space-y-3">
-            {parentCategories.map((category) => {
-              const subcategories = getSubcategories(category.id);
-              return (
-                <div key={category.id}>
-                  <Card className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3 flex-1">
-                        {category.image_url ? (
-                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
-                            <img src={category.image_url} alt={category.name} className="w-full h-full object-contain" />
-                          </div>
-                        ) : (
-                          <div className="text-3xl">{category.icon}</div>
-                        )}
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900 dark:text-white">{category.name}</h3>
-                          {category.name_en && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{category.name_en}</p>
-                          )}
-                          {!category.is_visible && (
-                            <span className="inline-block mt-1 text-xs text-gray-500 dark:text-gray-400">Скрыта</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleToggleVisibility(category)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            category.is_visible ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              category.is_visible ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(category)}
-                          className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                        >
-                          <Edit2 className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(category)}
-                          className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleAddSubcategory(category.id)}
-                      className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Добавить подкатегорию
-                    </button>
-                  </Card>
-
-                  {subcategories.length > 0 && (
-                    <div className="ml-8 mt-2 space-y-2">
-                      {subcategories.map((sub) => (
-                        <Card key={sub.id} className="p-3 bg-gray-50 dark:bg-gray-800/50">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 flex-1">
-                              <ChevronRight className="w-4 h-4 text-gray-400" />
-                              {sub.image_url ? (
-                                <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
-                                  <img src={sub.image_url} alt={sub.name} className="w-full h-full object-contain" />
-                                </div>
-                              ) : (
-                                <div className="text-2xl">{sub.icon}</div>
-                              )}
-                              <div className="flex-1">
-                                <h4 className="text-sm font-medium text-gray-900 dark:text-white">{sub.name}</h4>
-                                {sub.name_en && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">{sub.name_en}</p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleToggleVisibility(sub)}
-                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                                  sub.is_visible ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-                                }`}
-                              >
-                                <span
-                                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                                    sub.is_visible ? 'translate-x-5' : 'translate-x-1'
-                                  }`}
-                                />
-                              </button>
-                              <button onClick={() => handleEdit(sub)} className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400">
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => handleDelete(sub)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {parentCategories.map((category) => renderCategory(category))}
           </div>
         )}
       </div>
@@ -410,19 +428,37 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
           </div>
 
           {languageTab === 'ru' ? (
-            <Input
-              label="Название категории"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Введите название на русском"
-            />
+            <>
+              <Input
+                label="Название категории"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Введите название на русском"
+              />
+              <Textarea
+                label="Описание (необязательно)"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Добавьте описание категории"
+                rows={3}
+              />
+            </>
           ) : (
-            <Input
-              label="Category name"
-              value={formData.nameEn}
-              onChange={(e) => setFormData(prev => ({ ...prev, nameEn: e.target.value }))}
-              placeholder="Enter name in English"
-            />
+            <>
+              <Input
+                label="Category name"
+                value={formData.nameEn}
+                onChange={(e) => setFormData(prev => ({ ...prev, nameEn: e.target.value }))}
+                placeholder="Enter name in English"
+              />
+              <Textarea
+                label="Description (optional)"
+                value={formData.descriptionEn}
+                onChange={(e) => setFormData(prev => ({ ...prev, descriptionEn: e.target.value }))}
+                placeholder="Add category description"
+                rows={3}
+              />
+            </>
           )}
 
           <div>
