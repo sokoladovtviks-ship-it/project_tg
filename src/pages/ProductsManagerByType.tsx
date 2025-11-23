@@ -367,6 +367,59 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
     return categories.find((c) => c.id === categoryId)?.name || 'Без категории';
   };
 
+  const renderInstructionPreview = (text: string) => {
+    if (!text) return null;
+
+    const imageRegex = /!\[.*?\]\((.*?)\)/g;
+    const parts: Array<{ type: 'text' | 'image'; content: string }> = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = imageRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        const textContent = text.substring(lastIndex, match.index);
+        if (textContent.trim()) {
+          parts.push({ type: 'text', content: textContent });
+        }
+      }
+
+      parts.push({ type: 'image', content: match[1] });
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < text.length) {
+      const textContent = text.substring(lastIndex);
+      if (textContent.trim()) {
+        parts.push({ type: 'text', content: textContent });
+      }
+    }
+
+    return (
+      <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Предпросмотр:</p>
+        <div className="space-y-2">
+          {parts.map((part, index) => (
+            part.type === 'text' ? (
+              <p key={index} className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                {part.content}
+              </p>
+            ) : (
+              <img
+                key={index}
+                src={part.content}
+                alt="Preview"
+                className="max-w-full rounded border border-gray-300 dark:border-gray-600"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            )
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   if (loading) return <Loading />;
 
   return (
@@ -468,7 +521,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
         onClose={() => setShowModal(false)}
         title={editingProduct ? 'Редактировать товар' : 'Новый товар'}
       >
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => setLanguageTab('ru')}
@@ -647,23 +700,29 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
               Можно добавлять текст и изображения. Используйте Ctrl+V для вставки изображений из буфера обмена.
             </p>
             {languageTab === 'ru' ? (
-              <Textarea
-                label="Инструкции (RU)"
-                value={formData.instructionsRu}
-                onChange={(e) => setFormData({ ...formData, instructionsRu: e.target.value })}
-                onPaste={(e) => handlePasteImage(e, 'instruction')}
-                placeholder="Инструкция по использованию (Ctrl+V для вставки изображений)"
-                rows={6}
-              />
+              <>
+                <Textarea
+                  label="Инструкции (RU)"
+                  value={formData.instructionsRu}
+                  onChange={(e) => setFormData({ ...formData, instructionsRu: e.target.value })}
+                  onPaste={(e) => handlePasteImage(e, 'instruction')}
+                  placeholder="Инструкция по использованию (Ctrl+V для вставки изображений)"
+                  rows={6}
+                />
+                {renderInstructionPreview(formData.instructionsRu)}
+              </>
             ) : (
-              <Textarea
-                label="Instructions (EN)"
-                value={formData.instructionsEn}
-                onChange={(e) => setFormData({ ...formData, instructionsEn: e.target.value })}
-                onPaste={(e) => handlePasteImage(e, 'instruction')}
-                placeholder="Usage instructions (Ctrl+V to paste images)"
-                rows={6}
-              />
+              <>
+                <Textarea
+                  label="Instructions (EN)"
+                  value={formData.instructionsEn}
+                  onChange={(e) => setFormData({ ...formData, instructionsEn: e.target.value })}
+                  onPaste={(e) => handlePasteImage(e, 'instruction')}
+                  placeholder="Usage instructions (Ctrl+V to paste images)"
+                  rows={6}
+                />
+                {renderInstructionPreview(formData.instructionsEn)}
+              </>
             )}
             <div className="mt-3">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
