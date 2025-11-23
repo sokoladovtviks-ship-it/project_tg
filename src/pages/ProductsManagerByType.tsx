@@ -145,8 +145,8 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
 
   const handleSave = async () => {
     try {
-      if (!formData.name.trim() || !formData.categoryId || !formData.price) {
-        webApp?.showAlert('Заполните все обязательные поля');
+      if (!formData.name.trim() || !formData.categoryId || !formData.price || !formData.accountLogin.trim() || !formData.accountPassword.trim()) {
+        webApp?.showAlert('Заполните все обязательные поля: название, категория, цена, логин и пароль');
         return;
       }
 
@@ -595,6 +595,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Введите название"
+                className={!formData.name.trim() ? 'border-red-500 focus:ring-red-500' : ''}
               />
               <Textarea
                 label="Описание"
@@ -629,7 +630,11 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
             <select
               value={formData.categoryId}
               onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                !formData.categoryId
+                  ? 'border-red-500 dark:border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+              }`}
             >
               <option value="">Выберите категорию</option>
               {categories.map((category) => (
@@ -647,6 +652,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
               value={formData.price}
               onChange={(e) => setFormData({ ...formData, price: e.target.value })}
               placeholder="0"
+              className={!formData.price ? 'border-red-500 focus:ring-red-500' : ''}
             />
             <Input
               label="Количество"
@@ -725,16 +731,18 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
             <h3 className="font-medium text-gray-900 dark:text-white mb-3">Данные аккаунта</h3>
             <div className="space-y-3">
               <Input
-                label="Логин"
+                label="Логин *"
                 value={formData.accountLogin}
                 onChange={(e) => setFormData({ ...formData, accountLogin: e.target.value })}
                 placeholder="Логин аккаунта"
+                className={!formData.accountLogin.trim() ? 'border-red-500 focus:ring-red-500' : ''}
               />
               <Input
-                label="Пароль"
+                label="Пароль *"
                 value={formData.accountPassword}
                 onChange={(e) => setFormData({ ...formData, accountPassword: e.target.value })}
                 placeholder="Пароль аккаунта"
+                className={!formData.accountPassword.trim() ? 'border-red-500 focus:ring-red-500' : ''}
               />
               <Input
                 label="Email"
