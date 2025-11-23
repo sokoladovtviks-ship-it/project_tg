@@ -214,7 +214,10 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
     try {
       setUploading(true);
       const fileExt = file.name.split('.').pop();
-      const fileName = `${storeId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const safeStoreId = storeId.replace(/-/g, '');
+      const fileName = `${safeStoreId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      console.log('Uploading to path:', fileName);
 
       const { error: uploadError } = await supabase.storage
         .from('store-assets')
@@ -223,10 +226,14 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
           upsert: false,
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
       const { data } = supabase.storage.from('store-assets').getPublicUrl(fileName);
 
+      console.log('Public URL:', data.publicUrl);
       return data.publicUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
