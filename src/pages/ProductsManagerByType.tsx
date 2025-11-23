@@ -429,23 +429,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
       </div>
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingProduct ? 'Редактировать товар' : 'Новый товар'}>
-        <div className="space-y-4">
-          <Input
-            label="Название *"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="Название товара"
-            className={showValidation && !formData.name.trim() ? 'border-red-500 focus:ring-red-500' : ''}
-          />
-
-          <Textarea
-            label="Описание"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Описание товара"
-            rows={3}
-          />
-
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Категория (рекомендуется)
@@ -464,53 +448,201 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
             </select>
           </div>
 
-          <Input
-            label="Цена *"
-            type="number"
-            value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-            placeholder="0"
-            className={showValidation && !formData.price ? 'border-red-500 focus:ring-red-500' : ''}
-          />
+          <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setLanguageTab('ru')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                languageTab === 'ru'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}
+            >
+              Русский
+            </button>
+            <button
+              onClick={() => setLanguageTab('en')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                languageTab === 'en'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}
+            >
+              English
+            </button>
+          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Изображения
-            </label>
-            <div className="space-y-2">
-              {formData.imagesUrls.map((url, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <img src={url} alt="" className="w-16 h-16 object-cover rounded" />
-                  <Button variant="secondary" size="sm" onClick={() => removeImage(index)}>
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageUpload}
+          {languageTab === 'ru' ? (
+            <>
+              <Input
+                label="Название *"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Название товара"
+                className={showValidation && !formData.name.trim() ? 'border-red-500 focus:ring-red-500' : ''}
               />
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => imageInputRef.current?.click()}
-                disabled={uploading}
+              <Textarea
+                label="Описание"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Описание товара"
+                rows={3}
+              />
+            </>
+          ) : (
+            <>
+              <Input
+                label="Product name"
+                value={formData.nameEn}
+                onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
+                placeholder="Enter name"
+              />
+              <Textarea
+                label="Description"
+                value={formData.descriptionEn}
+                onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
+                placeholder="Describe the product"
+                rows={3}
+              />
+            </>
+          )}
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Input
+                label="Цена *"
+                type="number"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                placeholder="0"
+                className={showValidation && !formData.price ? 'border-red-500 focus:ring-red-500' : ''}
+              />
+            </div>
+            <div className="w-24">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Валюта
+              </label>
+              <button
+                onClick={() => setFormData({ ...formData, currency: formData.currency === 'RUB' ? 'USD' : 'RUB' })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-medium"
               >
-                <Upload className="w-4 h-4 mr-2" />
-                {uploading ? 'Загрузка...' : 'Загрузить фото'}
-              </Button>
+                {formData.currency}
+              </button>
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <Button onClick={handleSave} className="flex-1">
-              {editingProduct ? 'Сохранить' : 'Создать'}
-            </Button>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Фотографии товара
+            </label>
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              {formData.imagesUrls.map((url, index) => (
+                <div key={index} className="relative">
+                  <img src={url} alt={`Product ${index + 1}`} className="w-full h-24 object-cover rounded-lg" />
+                  <button
+                    onClick={() => removeImage(index)}
+                    className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageUpload}
+            />
+            <div
+              onClick={() => imageInputRef.current?.click()}
+              className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors"
+            >
+              {uploading ? (
+                <p className="text-sm text-gray-600 dark:text-gray-400">Загрузка...</p>
+              ) : (
+                <p className="text-sm text-gray-600 dark:text-gray-400">+ Добавить фото</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="autoDelivery"
+              checked={formData.autoDelivery}
+              onChange={(e) => setFormData({ ...formData, autoDelivery: e.target.checked })}
+              className="w-5 h-5 text-blue-600 border-gray-300 rounded"
+            />
+            <label htmlFor="autoDelivery" className="text-sm text-gray-700 dark:text-gray-300">
+              Автоматическая выдача (без подтверждения админа)
+            </label>
+          </div>
+
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="font-medium text-gray-900 dark:text-white mb-3">Инструкции</h3>
+
+            {languageTab === 'ru' ? (
+              <Textarea
+                label="Инструкции (русский)"
+                value={formData.instructionsRu}
+                onChange={(e) => setFormData({ ...formData, instructionsRu: e.target.value })}
+                placeholder="Инструкции для покупателя"
+                rows={4}
+              />
+            ) : (
+              <Textarea
+                label="Instructions (English)"
+                value={formData.instructionsEn}
+                onChange={(e) => setFormData({ ...formData, instructionsEn: e.target.value })}
+                placeholder="Instructions for buyer"
+                rows={4}
+              />
+            )}
+
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Изображения к инструкциям
+              </label>
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {formData.instructionsImages.map((url, index) => (
+                  <div key={index} className="relative">
+                    <img src={url} alt={`Instruction ${index + 1}`} className="w-full h-24 object-cover rounded-lg" />
+                    <button
+                      onClick={() => removeInstructionImage(index)}
+                      className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <input
+                ref={instructionImageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleInstructionImageUpload}
+              />
+              <div
+                onClick={() => instructionImageInputRef.current?.click()}
+                className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400 transition-colors"
+              >
+                {uploading ? (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Загрузка...</p>
+                ) : (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">+ Добавить изображение</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button variant="secondary" onClick={() => setShowModal(false)} className="flex-1">
               Отмена
+            </Button>
+            <Button onClick={handleSave} className="flex-1">
+              {editingProduct ? 'Сохранить' : 'Создать'}
             </Button>
           </div>
         </div>
