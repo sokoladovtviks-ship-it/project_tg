@@ -325,35 +325,54 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
 
   const handlePasteImage = async (e: React.ClipboardEvent, type: 'product' | 'instruction') => {
     const items = e.clipboardData?.items;
-    if (!items) return;
+    if (!items) {
+      console.log('No clipboard items');
+      return;
+    }
+
+    console.log('Clipboard items:', items.length);
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
+      console.log('Item type:', item.type);
+
       if (item.type.indexOf('image') !== -1) {
         e.preventDefault();
-        const file = item.getAsFile();
-        if (!file) continue;
+        console.log('Found image, processing...');
 
+        const file = item.getAsFile();
+        if (!file) {
+          console.log('Failed to get file');
+          continue;
+        }
+
+        console.log('File:', file.name, file.size, 'bytes');
         const url = await uploadImage(file);
+        console.log('Uploaded URL:', url);
+
         if (url) {
           if (type === 'product') {
             setFormData({
               ...formData,
               imagesUrls: [...formData.imagesUrls, url],
             });
+            console.log('Added to product images');
           } else {
             const currentText = languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn;
             const imageMarkdown = `\n![Изображение](${url})\n`;
+            const newText = currentText + imageMarkdown;
+
+            console.log('Adding to instructions, current length:', currentText.length, 'new length:', newText.length);
 
             if (languageTab === 'ru') {
               setFormData({
                 ...formData,
-                instructionsRu: currentText + imageMarkdown,
+                instructionsRu: newText,
               });
             } else {
               setFormData({
                 ...formData,
-                instructionsEn: currentText + imageMarkdown,
+                instructionsEn: newText,
               });
             }
           }
@@ -378,7 +397,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
     while ((match = imageRegex.exec(text)) !== null) {
       if (match.index > lastIndex) {
         const textContent = text.substring(lastIndex, match.index);
-        if (textContent.trim()) {
+        if (textContent) {
           parts.push({ type: 'text', content: textContent });
         }
       }
@@ -389,30 +408,44 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
 
     if (lastIndex < text.length) {
       const textContent = text.substring(lastIndex);
-      if (textContent.trim()) {
+      if (textContent) {
         parts.push({ type: 'text', content: textContent });
       }
+    }
+
+    if (parts.length === 0 && text.trim()) {
+      parts.push({ type: 'text', content: text });
     }
 
     return (
       <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
         <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Предпросмотр:</p>
         <div className="space-y-2">
+          {uploading && (
+            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              Загрузка изображения...
+            </div>
+          )}
           {parts.map((part, index) => (
             part.type === 'text' ? (
               <p key={index} className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                 {part.content}
               </p>
             ) : (
-              <img
-                key={index}
-                src={part.content}
-                alt="Preview"
-                className="max-w-full rounded border border-gray-300 dark:border-gray-600"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
+              <div key={index} className="relative">
+                <img
+                  src={part.content}
+                  alt="Preview"
+                  className="max-w-full rounded border border-gray-300 dark:border-gray-600"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '';
+                    target.alt = 'Ошибка загрузки изображения';
+                    target.className = 'text-red-500 text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded';
+                  }}
+                />
+              </div>
             )
           ))}
         </div>
