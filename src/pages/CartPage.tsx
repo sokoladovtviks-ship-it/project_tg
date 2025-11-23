@@ -40,7 +40,11 @@ export const CartPage = ({ onBack, onCheckout }: CartPageProps) => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-32">
       <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 shadow-sm">
         <div className="flex items-center gap-3 px-4 py-3">
-          <button onClick={onBack} className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <button
+            onClick={onBack}
+            className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            title="На главную"
+          >
             <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
           </button>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">

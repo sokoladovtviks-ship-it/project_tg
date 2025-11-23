@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ShoppingCart, Settings, Moon, Sun } from 'lucide-react';
+import { Settings, Moon, Sun } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../lib/database.types';
 import { Card } from '../components/Card';
 import { Loading } from '../components/Loading';
 import { useTranslation } from '../hooks/useTranslation';
-import { useCart } from '../hooks/useCart';
 import { useTelegram } from '../hooks/useTelegram';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -29,7 +28,6 @@ export const StorePage = ({
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
-  const { itemCount } = useCart();
   const { webApp } = useTelegram();
   const { isDark, toggleTheme } = useTheme();
 
@@ -84,17 +82,6 @@ export const StorePage = ({
                 <Settings className="w-5 h-5 text-gray-700 dark:text-gray-300" />
               </button>
             )}
-            <button
-              onClick={onCartClick}
-              className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              <ShoppingCart className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-              {itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
-                  {itemCount}
-                </span>
-              )}
-            </button>
           </div>
         </div>
       </div>

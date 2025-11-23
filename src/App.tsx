@@ -4,6 +4,7 @@ import { useTelegram } from './hooks/useTelegram';
 import { useTranslation } from './hooks/useTranslation';
 import { supabase } from './lib/supabase';
 import { Loading } from './components/Loading';
+import { BottomNav } from './components/BottomNav';
 import { StorePage } from './pages/StorePage';
 import { ProductsPage } from './pages/ProductsPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
@@ -24,6 +25,8 @@ type Page =
   | 'product-detail'
   | 'cart'
   | 'checkout'
+  | 'search'
+  | 'profile'
   | 'admin-dashboard'
   | 'admin-categories'
   | 'admin-products'
@@ -137,6 +140,26 @@ function App() {
     setCurrentPage('store');
   };
 
+  const handleBottomNavClick = (page: 'home' | 'catalog' | 'search' | 'cart' | 'profile') => {
+    const pageMap: Record<string, Page> = {
+      home: 'store',
+      catalog: 'store',
+      search: 'search',
+      cart: 'cart',
+      profile: 'profile',
+    };
+    setCurrentPage(pageMap[page]);
+  };
+
+  const getCurrentBottomNavPage = (): 'home' | 'catalog' | 'search' | 'cart' | 'profile' => {
+    if (currentPage === 'cart') return 'cart';
+    if (currentPage === 'search') return 'search';
+    if (currentPage === 'profile') return 'profile';
+    return 'home';
+  };
+
+  const showBottomNav = !currentPage.startsWith('admin') && currentPage !== 'checkout' && currentPage !== 'product-detail';
+
   if (loading || !storeId) {
     return <Loading />;
   }
@@ -174,6 +197,27 @@ function App() {
             onBack={() => setCurrentPage('store')}
             onCheckout={() => setCurrentPage('checkout')}
           />
+        )}
+
+        {currentPage === 'search' && (
+          <ProductsPage
+            categoryId=""
+            onBack={() => setCurrentPage('store')}
+            onProductClick={handleProductClick}
+          />
+        )}
+
+        {currentPage === 'profile' && (
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
+            <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 shadow-sm">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Профиль</h1>
+              </div>
+            </div>
+            <div className="p-4 text-center py-12">
+              <p className="text-gray-500 dark:text-gray-400">Страница профиля в разработке</p>
+            </div>
+          </div>
         )}
 
         {currentPage === 'checkout' && (
@@ -249,6 +293,13 @@ function App() {
           <TelegramManager
             storeId={storeId}
             onBack={() => setCurrentPage('admin-dashboard')}
+          />
+        )}
+
+        {showBottomNav && (
+          <BottomNav
+            currentPage={getCurrentBottomNavPage()}
+            onNavigate={handleBottomNavClick}
           />
         )}
       </div>
