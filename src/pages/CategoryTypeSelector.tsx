@@ -36,11 +36,7 @@ export const CategoryTypeSelector = ({ onBack, onSelectType }: CategoryTypeSelec
   };
 
   const handleBackClick = () => {
-    if (selectedMainType) {
-      setSelectedMainType(null);
-    } else {
-      onBack();
-    }
+    onBack();
   };
 
   return (
