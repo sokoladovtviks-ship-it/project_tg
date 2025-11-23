@@ -644,11 +644,6 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
                 </option>
               ))}
             </select>
-            {!formData.categoryId && (
-              <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
-                ⚠️ Без категории товар не будет отображаться в магазине
-              </p>
-            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
