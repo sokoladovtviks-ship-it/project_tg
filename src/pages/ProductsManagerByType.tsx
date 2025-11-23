@@ -12,6 +12,7 @@ import { useTelegram } from '../hooks/useTelegram';
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Category = Database['public']['Tables']['categories']['Row'];
+type ProductAccount = Database['public']['Tables']['product_accounts']['Row'];
 
 interface ProductsManagerByTypeProps {
   storeId: string;
@@ -30,8 +31,11 @@ const TYPE_NAMES: Record<string, string> = {
 export const ProductsManagerByType = ({ storeId, productType, onBack }: ProductsManagerByTypeProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [productAccounts, setProductAccounts] = useState<Record<string, ProductAccount[]>>({});
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showAccountsModal, setShowAccountsModal] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [languageTab, setLanguageTab] = useState<'ru' | 'en'>('ru');
   const [formData, setFormData] = useState({
@@ -41,18 +45,17 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
     descriptionEn: '',
     price: '',
     currency: 'RUB',
-    stockQuantity: '',
     categoryId: '',
     imagesUrls: [] as string[],
-    accountLogin: '',
-    accountPassword: '',
-    accountEmail: '',
-    accountEmailPassword: '',
     autoDelivery: true,
     instructionsRu: '',
     instructionsEn: '',
     instructionsImages: [] as string[],
     isActive: true,
+  });
+  const [accountFormData, setAccountFormData] = useState({
+    accountLogin: '',
+    accountPassword: '',
   });
   const [imageUrl, setImageUrl] = useState('');
   const [instructionImageUrl, setInstructionImageUrl] = useState('');
@@ -86,9 +89,28 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
 
       setCategories(categoriesResult.data || []);
       setProducts(productsResult.data || []);
+
+      const productIds = productsResult.data?.map(p => p.id) || [];
+      if (productIds.length > 0) {
+        const accountsResult = await supabase
+          .from('product_accounts')
+          .select('*')
+          .in('product_id', productIds);
+
+        if (!accountsResult.error && accountsResult.data) {
+          const accountsByProduct: Record<string, ProductAccount[]> = {};
+          accountsResult.data.forEach(account => {
+            if (!accountsByProduct[account.product_id]) {
+              accountsByProduct[account.product_id] = [];
+            }
+            accountsByProduct[account.product_id].push(account);
+          });
+          setProductAccounts(accountsByProduct);
+        }
+      }
     } catch (error) {
       console.error('Error loading data:', error);
-      webApp?.showAlert('Ошибка загрузки данных');
+      alert('Ошибка загрузки данных');
     } finally {
       setLoading(false);
     }
@@ -99,22 +121,17 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
       setEditingProduct(product);
       setFormData({
         name: product.name,
-        nameEn: product.name_en || '',
+        nameEn: product.name,
         description: product.description || '',
-        descriptionEn: product.description_en || '',
+        descriptionEn: product.description || '',
         price: product.price.toString(),
-        currency: product.currency,
-        stockQuantity: product.stock_quantity.toString(),
+        currency: 'RUB',
         categoryId: product.category_id,
         imagesUrls: product.images_urls || [],
-        accountLogin: product.account_login || '',
-        accountPassword: product.account_password || '',
-        accountEmail: product.account_email || '',
-        accountEmailPassword: product.account_email_password || '',
-        autoDelivery: product.auto_delivery,
-        instructionsRu: product.instructions_ru || '',
-        instructionsEn: product.instructions_en || '',
-        instructionsImages: product.instructions_images || [],
+        autoDelivery: true,
+        instructionsRu: '',
+        instructionsEn: '',
+        instructionsImages: [],
         isActive: product.is_active,
       });
     } else {
@@ -126,13 +143,8 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
         descriptionEn: '',
         price: '',
         currency: 'RUB',
-        stockQuantity: '',
-        categoryId: categories[0]?.id || '',
+        categoryId: '',
         imagesUrls: [],
-        accountLogin: '',
-        accountPassword: '',
-        accountEmail: '',
-        accountEmailPassword: '',
         autoDelivery: true,
         instructionsRu: '',
         instructionsEn: '',
@@ -143,10 +155,56 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
     setShowModal(true);
   };
 
+  const openAccountsModal = (productId: string) => {
+    setSelectedProductId(productId);
+    setShowAccountsModal(true);
+  };
+
+  const handleSaveAccount = async () => {
+    if (!selectedProductId) return;
+
+    try {
+      if (!accountFormData.accountLogin.trim() || !accountFormData.accountPassword.trim()) {
+        alert('Заполните логин и пароль');
+        return;
+      }
+
+      const { error } = await supabase.from('product_accounts').insert([{
+        product_id: selectedProductId,
+        account_login: accountFormData.accountLogin,
+        account_password: accountFormData.accountPassword,
+      }]);
+
+      if (error) throw error;
+
+      alert('Аккаунт добавлен');
+      setAccountFormData({ accountLogin: '', accountPassword: '' });
+      loadData();
+    } catch (error) {
+      console.error('Error saving account:', error);
+      alert('Ошибка сохранения аккаунта');
+    }
+  };
+
+  const handleDeleteAccount = async (accountId: string) => {
+    if (!confirm('Удалить этот аккаунт?')) return;
+
+    try {
+      const { error } = await supabase.from('product_accounts').delete().eq('id', accountId);
+
+      if (error) throw error;
+      alert('Аккаунт удалён');
+      loadData();
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      alert('Ошибка удаления аккаунта');
+    }
+  };
+
   const handleSave = async () => {
     try {
-      if (!formData.name.trim() || !formData.price || !formData.accountLogin.trim() || !formData.accountPassword.trim()) {
-        alert('Заполните все обязательные поля: название, цена, логин и пароль');
+      if (!formData.name.trim() || !formData.price) {
+        alert('Заполните название и цену');
         return;
       }
 
@@ -156,25 +214,13 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
       }
 
       const productData = {
-        store_id: storeId,
-        category_id: formData.categoryId,
-        name: formData.name.trim(),
-        name_en: formData.nameEn.trim() || null,
-        description: formData.description.trim() || null,
-        description_en: formData.descriptionEn.trim() || null,
+        name: formData.name,
+        description: formData.description || null,
         price: parseFloat(formData.price),
-        currency: formData.currency,
-        stock_quantity: parseInt(formData.stockQuantity) || 0,
+        category_id: formData.categoryId,
         images_urls: formData.imagesUrls,
-        account_login: formData.accountLogin.trim() || null,
-        account_password: formData.accountPassword.trim() || null,
-        account_email: formData.accountEmail.trim() || null,
-        account_email_password: formData.accountEmailPassword.trim() || null,
-        auto_delivery: formData.autoDelivery,
-        instructions_ru: formData.instructionsRu.trim() || null,
-        instructions_en: formData.instructionsEn.trim() || null,
-        instructions_images: formData.instructionsImages,
         is_active: formData.isActive,
+        stock_quantity: 0,
       };
 
       if (editingProduct) {
@@ -207,7 +253,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
       const { error } = await supabase.from('products').delete().eq('id', id);
 
       if (error) throw error;
-      alert('Товар удален');
+      alert('Товар удалён');
       loadData();
     } catch (error) {
       console.error('Error deleting product:', error);
@@ -219,26 +265,15 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
     try {
       setUploading(true);
       const fileExt = file.name.split('.').pop();
-      const safeStoreId = storeId.replace(/-/g, '');
-      const fileName = `${safeStoreId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `products/${fileName}`;
 
-      console.log('Uploading to path:', fileName);
+      const { error: uploadError } = await supabase.storage.from('store-images').upload(filePath, file);
 
-      const { error: uploadError } = await supabase.storage
-        .from('store-assets')
-        .upload(fileName, file, {
-          contentType: file.type,
-          upsert: false,
-        });
+      if (uploadError) throw uploadError;
 
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw uploadError;
-      }
+      const { data } = supabase.storage.from('store-images').getPublicUrl(filePath);
 
-      const { data } = supabase.storage.from('store-assets').getPublicUrl(fileName);
-
-      console.log('Public URL:', data.publicUrl);
       return data.publicUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -250,21 +285,12 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    const uploadPromises = Array.from(files).map(file => uploadImage(file));
-    const urls = await Promise.all(uploadPromises);
-    const validUrls = urls.filter((url): url is string => url !== null);
-
-    if (validUrls.length > 0) {
-      setFormData({
-        ...formData,
-        imagesUrls: [...formData.imagesUrls, ...validUrls],
-      });
-    }
-    if (imageInputRef.current) {
-      imageInputRef.current.value = '';
+    const url = await uploadImage(file);
+    if (url) {
+      setFormData({ ...formData, imagesUrls: [...formData.imagesUrls, url] });
     }
   };
 
@@ -274,359 +300,138 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
 
     const url = await uploadImage(file);
     if (url) {
-      const currentText = languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn;
-      const imageMarkdown = `\n![Изображение](${url})\n`;
-
-      if (languageTab === 'ru') {
-        setFormData({
-          ...formData,
-          instructionsRu: currentText + imageMarkdown,
-        });
-      } else {
-        setFormData({
-          ...formData,
-          instructionsEn: currentText + imageMarkdown,
-        });
-      }
-    }
-    if (instructionImageInputRef.current) {
-      instructionImageInputRef.current.value = '';
-    }
-  };
-
-  const addImage = () => {
-    if (imageUrl.trim()) {
-      setFormData({
-        ...formData,
-        imagesUrls: [...formData.imagesUrls, imageUrl.trim()],
-      });
-      setImageUrl('');
+      setFormData({ ...formData, instructionsImages: [...formData.instructionsImages, url] });
     }
   };
 
   const removeImage = (index: number) => {
-    setFormData({
-      ...formData,
-      imagesUrls: formData.imagesUrls.filter((_, i) => i !== index),
-    });
-  };
-
-  const addInstructionImage = () => {
-    if (instructionImageUrl.trim()) {
-      const currentText = languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn;
-      const imageMarkdown = `\n![Изображение](${instructionImageUrl.trim()})\n`;
-
-      if (languageTab === 'ru') {
-        setFormData({
-          ...formData,
-          instructionsRu: currentText + imageMarkdown,
-        });
-      } else {
-        setFormData({
-          ...formData,
-          instructionsEn: currentText + imageMarkdown,
-        });
-      }
-      setInstructionImageUrl('');
-    }
+    const newImages = [...formData.imagesUrls];
+    newImages.splice(index, 1);
+    setFormData({ ...formData, imagesUrls: newImages });
   };
 
   const removeInstructionImage = (index: number) => {
-    setFormData({
-      ...formData,
-      instructionsImages: formData.instructionsImages.filter((_, i) => i !== index),
-    });
-  };
-
-  const handlePasteImage = async (e: React.ClipboardEvent, type: 'product' | 'instruction') => {
-    const items = e.clipboardData?.items;
-    if (!items) {
-      console.log('No clipboard items');
-      return;
-    }
-
-    console.log('Clipboard items:', items.length);
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      console.log('Item type:', item.type);
-
-      if (item.type.indexOf('image') !== -1) {
-        e.preventDefault();
-        console.log('Found image, processing...');
-
-        const file = item.getAsFile();
-        if (!file) {
-          console.log('Failed to get file');
-          continue;
-        }
-
-        console.log('File:', file.name, file.size, 'bytes');
-        const url = await uploadImage(file);
-        console.log('Uploaded URL:', url);
-
-        if (url) {
-          if (type === 'product') {
-            setFormData({
-              ...formData,
-              imagesUrls: [...formData.imagesUrls, url],
-            });
-            console.log('Added to product images');
-          } else {
-            const currentText = languageTab === 'ru' ? formData.instructionsRu : formData.instructionsEn;
-            const imageMarkdown = `\n![Изображение](${url})\n`;
-            const newText = currentText + imageMarkdown;
-
-            console.log('Adding to instructions, current length:', currentText.length, 'new length:', newText.length);
-
-            if (languageTab === 'ru') {
-              setFormData({
-                ...formData,
-                instructionsRu: newText,
-              });
-            } else {
-              setFormData({
-                ...formData,
-                instructionsEn: newText,
-              });
-            }
-          }
-        }
-        break;
-      }
-    }
-  };
-
-  const getCategoryName = (categoryId: string) => {
-    return categories.find((c) => c.id === categoryId)?.name || 'Без категории';
-  };
-
-  const renderInstructionPreview = (text: string) => {
-    if (!text) return null;
-
-    const imageRegex = /!\[.*?\]\((.*?)\)/g;
-    const parts: Array<{ type: 'text' | 'image'; content: string }> = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = imageRegex.exec(text)) !== null) {
-      if (match.index > lastIndex) {
-        const textContent = text.substring(lastIndex, match.index);
-        if (textContent) {
-          parts.push({ type: 'text', content: textContent });
-        }
-      }
-
-      parts.push({ type: 'image', content: match[1] });
-      lastIndex = match.index + match[0].length;
-    }
-
-    if (lastIndex < text.length) {
-      const textContent = text.substring(lastIndex);
-      if (textContent) {
-        parts.push({ type: 'text', content: textContent });
-      }
-    }
-
-    if (parts.length === 0 && text.trim()) {
-      parts.push({ type: 'text', content: text });
-    }
-
-    return (
-      <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Предпросмотр:</p>
-        <div className="space-y-2">
-          {uploading && (
-            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-              Загрузка изображения...
-            </div>
-          )}
-          {parts.map((part, index) => (
-            part.type === 'text' ? (
-              <p key={index} className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                {part.content}
-              </p>
-            ) : (
-              <div key={index} className="relative">
-                <img
-                  src={part.content}
-                  alt="Preview"
-                  className="max-w-full rounded border border-gray-300 dark:border-gray-600"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = '';
-                    target.alt = 'Ошибка загрузки изображения';
-                    target.className = 'text-red-500 text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded';
-                  }}
-                />
-              </div>
-            )
-          ))}
-        </div>
-      </div>
-    );
+    const newImages = [...formData.instructionsImages];
+    newImages.splice(index, 1);
+    setFormData({ ...formData, instructionsImages: newImages });
   };
 
   if (loading) return <Loading />;
 
+  const getAvailableAccounts = (productId: string) => {
+    const accounts = productAccounts[productId] || [];
+    return accounts.filter(acc => !acc.is_sold);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
-      <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 shadow-sm">
-        <div className="flex items-center justify-between px-4 py-3">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
+        <div className="max-w-screen-xl mx-auto px-4 py-4">
           <div className="flex items-center gap-3">
-            <button
-              onClick={onBack}
-              className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-            </button>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              {TYPE_NAMES[productType] || 'Товары'}
-            </h1>
+            <Button variant="secondary" size="sm" onClick={onBack}>
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                {TYPE_NAMES[productType]}
+              </h1>
+            </div>
           </div>
-          <Button onClick={() => openModal()} size="sm">
-            <Plus className="w-4 h-4" />
-            Добавить
-          </Button>
         </div>
       </div>
 
-      <div className="p-4">
-        {categories.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
-              Нет категорий типа "{TYPE_NAMES[productType]}"
-            </p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              Создайте категорию в разделе "Категории"
-            </p>
-          </div>
-        ) : products.length === 0 ? (
+      <div className="max-w-screen-xl mx-auto px-4 py-6">
+        <Button onClick={() => openModal()} className="mb-6 w-full">
+          <Plus className="w-4 h-4" />
+          Добавить товар
+        </Button>
+
+        {products.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">Нет товаров</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {products.map((product) => (
-              <Card key={product.id} className="p-4">
-                <div className="flex gap-3">
-                  {product.images_urls && product.images_urls.length > 0 ? (
-                    <img
-                      src={product.images_urls[0]}
-                      alt={product.name}
-                      className="w-20 h-20 object-cover rounded-lg"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                      <span className="text-3xl">📦</span>
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                      {product.name}
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                      {getCategoryName(product.category_id)}
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg font-bold text-gray-900 dark:text-white">
-                        {product.price.toLocaleString()} {product.currency}
-                      </span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        Остаток: {product.stock_quantity}
-                      </span>
-                      {!product.is_active && (
-                        <span className="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded">
-                          Неактивен
-                        </span>
+            {products.map((product) => {
+              const availableAccounts = getAvailableAccounts(product.id);
+              return (
+                <Card key={product.id} className="p-4">
+                  <div className="flex gap-4">
+                    {product.images_urls && product.images_urls.length > 0 ? (
+                      <img
+                        src={product.images_urls[0]}
+                        alt={product.name}
+                        className="w-20 h-20 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                        <ImageIcon className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{product.name}</h3>
+                      {product.description && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          {product.description}
+                        </p>
                       )}
+                      <div className="flex items-center gap-4 mt-2">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          {product.price} ₽
+                        </span>
+                        <span className={`text-sm ${availableAccounts.length > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          В наличии: {availableAccounts.length}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => openAccountsModal(product.id)}
+                      >
+                        Аккаунты
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => openModal(product)}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleDelete(product.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => openModal(product)}
-                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
 
-      <Modal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        title={editingProduct ? 'Редактировать товар' : 'Новый товар'}
-      >
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
-          <div className="flex gap-2 mb-4">
-            <button
-              onClick={() => setLanguageTab('ru')}
-              className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
-                languageTab === 'ru'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              Русский
-            </button>
-            <button
-              onClick={() => setLanguageTab('en')}
-              className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
-                languageTab === 'en'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              English
-            </button>
-          </div>
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingProduct ? 'Редактировать товар' : 'Новый товар'}>
+        <div className="space-y-4">
+          <Input
+            label="Название *"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="Название товара"
+            className={!formData.name.trim() ? 'border-red-500 focus:ring-red-500' : ''}
+          />
 
-          {languageTab === 'ru' ? (
-            <>
-              <Input
-                label="Название *"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Введите название"
-                className={!formData.name.trim() ? 'border-red-500 focus:ring-red-500' : ''}
-              />
-              <Textarea
-                label="Описание"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Описание товара"
-                rows={3}
-              />
-            </>
-          ) : (
-            <>
-              <Input
-                label="Name"
-                value={formData.nameEn}
-                onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-                placeholder="Enter name"
-              />
-              <Textarea
-                label="Description"
-                value={formData.descriptionEn}
-                onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
-                placeholder="Product description"
-                rows={3}
-              />
-            </>
-          )}
+          <Textarea
+            label="Описание"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder="Описание товара"
+            rows={3}
+          />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -646,215 +451,135 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Цена *"
-              type="number"
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-              placeholder="0"
-              className={!formData.price ? 'border-red-500 focus:ring-red-500' : ''}
-            />
-            <Input
-              label="Количество"
-              type="number"
-              value={formData.stockQuantity}
-              onChange={(e) => setFormData({ ...formData, stockQuantity: e.target.value })}
-              placeholder="0"
-            />
-          </div>
+          <Input
+            label="Цена *"
+            type="number"
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            placeholder="0"
+            className={!formData.price ? 'border-red-500 focus:ring-red-500' : ''}
+          />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-              Изображения товара
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Изображения
             </label>
-            <div className="space-y-3">
+            <div className="space-y-2">
+              {formData.imagesUrls.map((url, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <img src={url} alt="" className="w-16 h-16 object-cover rounded" />
+                  <Button variant="secondary" size="sm" onClick={() => removeImage(index)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
               <input
                 ref={imageInputRef}
                 type="file"
                 accept="image/*"
-                multiple
-                onChange={handleImageUpload}
                 className="hidden"
+                onChange={handleImageUpload}
               />
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => imageInputRef.current?.click()}
-                  disabled={uploading}
-                  className="flex-1"
-                >
-                  <Upload className="w-5 h-5 mr-2" />
-                  {uploading ? 'Загрузка...' : 'Загрузить фото'}
-                </Button>
-              </div>
-              <Input
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                onPaste={(e) => handlePasteImage(e, 'product')}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && imageUrl.trim()) {
-                    addImage();
-                  }
-                }}
-                placeholder="Или вставьте URL / Ctrl+V для изображения и нажмите Enter"
-              />
-              {formData.imagesUrls.length > 0 && (
-                <div className="grid grid-cols-3 gap-3 mt-3">
-                  {formData.imagesUrls.map((url, index) => (
-                    <div key={index} className="relative group aspect-square">
-                      <img
-                        src={url}
-                        alt={`Фото ${index + 1}`}
-                        className="w-full h-full object-cover rounded-lg border-2 border-gray-200 dark:border-gray-600"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '';
-                          target.alt = 'Ошибка загрузки';
-                        }}
-                      />
-                      <button
-                        onClick={() => removeImage(index)}
-                        className="absolute top-1 right-1 p-1.5 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-700"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                      <div className="absolute bottom-1 left-1 px-2 py-0.5 bg-black/60 text-white text-xs rounded">
-                        {index + 1}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={uploading}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {uploading ? 'Загрузка...' : 'Загрузить фото'}
+              </Button>
             </div>
-          </div>
-
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-            <h3 className="font-medium text-gray-900 dark:text-white mb-3">Данные аккаунта</h3>
-            <div className="space-y-3">
-              <Input
-                label="Логин *"
-                value={formData.accountLogin}
-                onChange={(e) => setFormData({ ...formData, accountLogin: e.target.value })}
-                placeholder="Логин аккаунта"
-                className={!formData.accountLogin.trim() ? 'border-red-500 focus:ring-red-500' : ''}
-              />
-              <Input
-                label="Пароль *"
-                value={formData.accountPassword}
-                onChange={(e) => setFormData({ ...formData, accountPassword: e.target.value })}
-                placeholder="Пароль аккаунта"
-                className={!formData.accountPassword.trim() ? 'border-red-500 focus:ring-red-500' : ''}
-              />
-              <Input
-                label="Email"
-                value={formData.accountEmail}
-                onChange={(e) => setFormData({ ...formData, accountEmail: e.target.value })}
-                placeholder="Email аккаунта"
-              />
-              <Input
-                label="Пароль от Email"
-                value={formData.accountEmailPassword}
-                onChange={(e) => setFormData({ ...formData, accountEmailPassword: e.target.value })}
-                placeholder="Пароль от email"
-              />
-            </div>
-          </div>
-
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-            <h3 className="font-medium text-gray-900 dark:text-white mb-3">Инструкции</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-              Можно добавлять текст и изображения. Используйте Ctrl+V для вставки изображений из буфера обмена.
-            </p>
-            {languageTab === 'ru' ? (
-              <>
-                <Textarea
-                  label="Инструкции (RU)"
-                  value={formData.instructionsRu}
-                  onChange={(e) => setFormData({ ...formData, instructionsRu: e.target.value })}
-                  onPaste={(e) => handlePasteImage(e, 'instruction')}
-                  placeholder="Инструкция по использованию (Ctrl+V для вставки изображений)"
-                  rows={6}
-                />
-                {renderInstructionPreview(formData.instructionsRu)}
-              </>
-            ) : (
-              <>
-                <Textarea
-                  label="Instructions (EN)"
-                  value={formData.instructionsEn}
-                  onChange={(e) => setFormData({ ...formData, instructionsEn: e.target.value })}
-                  onPaste={(e) => handlePasteImage(e, 'instruction')}
-                  placeholder="Usage instructions (Ctrl+V to paste images)"
-                  rows={6}
-                />
-                {renderInstructionPreview(formData.instructionsEn)}
-              </>
-            )}
-            <div className="mt-3">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Добавить изображение в инструкцию
-              </label>
-              <div className="flex gap-2">
-                <input
-                  ref={instructionImageInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleInstructionImageUpload}
-                  className="hidden"
-                />
-                <Button
-                  onClick={() => instructionImageInputRef.current?.click()}
-                  size="sm"
-                  disabled={uploading}
-                  variant="secondary"
-                  className="whitespace-nowrap"
-                >
-                  <ImageIcon className="w-4 h-4 mr-1" />
-                  {uploading ? 'Загрузка...' : 'Загрузить фото'}
-                </Button>
-                <Input
-                  value={instructionImageUrl}
-                  onChange={(e) => setInstructionImageUrl(e.target.value)}
-                  onPaste={(e) => handlePasteImage(e, 'instruction')}
-                  placeholder="или вставьте URL / Ctrl+V для изображения"
-                  className="flex-1"
-                />
-                <Button onClick={addInstructionImage} size="sm" disabled={!instructionImageUrl.trim()}>
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.autoDelivery}
-                onChange={(e) => setFormData({ ...formData, autoDelivery: e.target.checked })}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Автовыдача</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Активен</span>
-            </label>
           </div>
 
           <div className="flex gap-3 pt-4">
             <Button onClick={handleSave} className="flex-1">
               {editingProduct ? 'Сохранить' : 'Создать'}
             </Button>
-            <Button onClick={() => setShowModal(false)} variant="secondary" className="flex-1">
+            <Button variant="secondary" onClick={() => setShowModal(false)} className="flex-1">
               Отмена
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showAccountsModal}
+        onClose={() => {
+          setShowAccountsModal(false);
+          setSelectedProductId(null);
+          setAccountFormData({ accountLogin: '', accountPassword: '' });
+        }}
+        title="Управление аккаунтами"
+      >
+        <div className="space-y-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <p className="text-sm text-blue-800 dark:text-blue-300">
+              Количество товара = количество добавленных аккаунтов
+            </p>
+          </div>
+
+          <Input
+            label="Логин *"
+            value={accountFormData.accountLogin}
+            onChange={(e) => setAccountFormData({ ...accountFormData, accountLogin: e.target.value })}
+            placeholder="Логин аккаунта"
+            className={!accountFormData.accountLogin.trim() ? 'border-red-500 focus:ring-red-500' : ''}
+          />
+
+          <Input
+            label="Пароль *"
+            value={accountFormData.accountPassword}
+            onChange={(e) => setAccountFormData({ ...accountFormData, accountPassword: e.target.value })}
+            placeholder="Пароль аккаунта"
+            className={!accountFormData.accountPassword.trim() ? 'border-red-500 focus:ring-red-500' : ''}
+          />
+
+          <Button onClick={handleSaveAccount} className="w-full">
+            <Plus className="w-4 h-4 mr-2" />
+            Добавить аккаунт
+          </Button>
+
+          {selectedProductId && (
+            <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="font-medium text-gray-900 dark:text-white">
+                Аккаунты ({getAvailableAccounts(selectedProductId).length})
+              </h3>
+              {getAvailableAccounts(selectedProductId).length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">Нет аккаунтов</p>
+              ) : (
+                getAvailableAccounts(selectedProductId).map((account) => (
+                  <Card key={account.id} className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {account.account_login}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {account.account_password}
+                        </p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleDeleteAccount(account.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                ))
+              )}
+            </div>
+          )}
+
+          <Button variant="secondary" onClick={() => {
+            setShowAccountsModal(false);
+            setSelectedProductId(null);
+            setAccountFormData({ accountLogin: '', accountPassword: '' });
+          }} className="w-full">
+            Закрыть
+          </Button>
         </div>
       </Modal>
     </div>

@@ -179,6 +179,38 @@ export interface Database {
           updated_at?: string;
         };
       };
+      product_accounts: {
+        Row: {
+          id: string;
+          product_id: string;
+          account_login: string;
+          account_password: string;
+          is_sold: boolean;
+          order_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          account_login: string;
+          account_password: string;
+          is_sold?: boolean;
+          order_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          account_login?: string;
+          account_password?: string;
+          is_sold?: boolean;
+          order_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
   };
 }
