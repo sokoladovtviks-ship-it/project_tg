@@ -341,14 +341,15 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
       </div>
 
       <div className="max-w-screen-xl mx-auto px-4 py-6">
-        <Button onClick={() => openModal()} className="mb-6 w-full">
-          <Plus className="w-4 h-4" />
+        <Button onClick={() => openModal()} className="mb-6 w-full py-4 text-lg font-semibold">
+          <Plus className="w-6 h-6 mr-2" />
           Добавить товар
         </Button>
 
         {products.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">Нет товаров</p>
+          <div className="text-center py-20">
+            <p className="text-lg text-gray-500 dark:text-gray-400">Нет товаров</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Нажмите "Добавить товар" чтобы создать первый товар</p>
           </div>
         ) : (
           <div className="space-y-3">
