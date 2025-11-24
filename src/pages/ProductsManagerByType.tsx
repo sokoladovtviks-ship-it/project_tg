@@ -376,17 +376,13 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   };
 
   const handleDeleteAccount = async (accountId: string) => {
-    if (!confirm('Удалить этот аккаунт?')) return;
-
     try {
       const { error } = await supabase.from('product_accounts').delete().eq('id', accountId);
 
       if (error) throw error;
-      alert('Аккаунт удалён');
       loadData();
     } catch (error) {
       console.error('Error deleting account:', error);
-      alert('Ошибка удаления аккаунта');
     }
   };
 
@@ -431,17 +427,13 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Удалить этот товар?')) return;
-
     try {
       const { error } = await supabase.from('products').delete().eq('id', id);
 
       if (error) throw error;
-      alert('Товар удалён');
       loadData();
     } catch (error) {
       console.error('Error deleting product:', error);
-      alert('Ошибка удаления товара');
     }
   };
 
