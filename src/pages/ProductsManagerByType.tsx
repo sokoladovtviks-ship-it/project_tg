@@ -254,8 +254,8 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
           .order('order_position'),
         supabase
           .from('products')
-          .select('*, categories(category_type)')
-          .or(`categories.category_type.eq.${productType},category_id.is.null`)
+          .select('*, categories(category_type, store_id)')
+          .eq('categories.store_id', storeId)
           .order('created_at', { ascending: false }),
       ]);
 
@@ -263,7 +263,14 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
       if (productsResult.error) throw productsResult.error;
 
       setCategories(categoriesResult.data || []);
-      setProducts(productsResult.data || []);
+
+      const filteredProducts = (productsResult.data || []).filter(product => {
+        if (!product.category_id) return true;
+        const category = product.categories as any;
+        return category && category.category_type === productType;
+      });
+
+      setProducts(filteredProducts);
 
       const productIds = productsResult.data?.map(p => p.id) || [];
       if (productIds.length > 0) {
