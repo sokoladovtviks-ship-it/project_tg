@@ -254,8 +254,8 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
           .order('order_position'),
         supabase
           .from('products')
-          .select('*, categories!inner(category_type)')
-          .eq('categories.category_type', productType)
+          .select('*, categories(category_type)')
+          .or(`categories.category_type.eq.${productType},category_id.is.null`)
           .order('created_at', { ascending: false }),
       ]);
 
@@ -359,7 +359,6 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
 
       if (error) throw error;
 
-      alert('Аккаунт добавлен');
       setAccountFormData({ accountLogin: '', accountPassword: '', accountEmail: '', accountEmailPassword: '' });
       setShowAccountValidation(false);
       loadData();
@@ -409,12 +408,10 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
           .eq('id', editingProduct.id);
 
         if (error) throw error;
-        alert('Товар обновлен');
       } else {
         const { error } = await supabase.from('products').insert([productData]);
 
         if (error) throw error;
-        alert('Товар создан');
       }
 
       setShowValidation(false);
@@ -550,27 +547,26 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => openAccountsModal(product.id)}
-                      >
-                        Аккаунты
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
+                      {productType === 'accounts' && (
+                        <button
+                          onClick={() => openAccountsModal(product.id)}
+                          className="px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 bg-gray-200 text-gray-800 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                        >
+                          Аккаунты
+                        </button>
+                      )}
+                      <button
                         onClick={() => openModal(product)}
+                        className="px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700"
                       >
                         <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
+                      </button>
+                      <button
                         onClick={() => handleDelete(product.id)}
+                        className="px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 bg-red-500 text-white hover:bg-red-600 active:bg-red-700"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 </Card>

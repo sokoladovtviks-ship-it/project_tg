@@ -446,7 +446,7 @@ export const CategoriesManagerByType = ({ storeId, categoryType, onBack }: Categ
                 label="Название категории"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Введите название на русском"
+                placeholder="Введите название"
               />
               <Textarea
                 label="Описание (необязательно)"
