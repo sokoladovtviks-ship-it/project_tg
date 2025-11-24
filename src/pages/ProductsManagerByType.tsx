@@ -272,7 +272,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
 
       setProducts(filteredProducts);
 
-      const productIds = productsResult.data?.map(p => p.id) || [];
+      const productIds = filteredProducts.map(p => p.id);
       if (productIds.length > 0) {
         const accountsResult = await supabase
           .from('product_accounts')
