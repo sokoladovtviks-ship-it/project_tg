@@ -273,11 +273,18 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
       setProducts(filteredProducts);
 
       const productIds = filteredProducts.map(p => p.id);
+      console.log('Loading accounts for products:', productIds);
       if (productIds.length > 0) {
         const accountsResult = await supabase
           .from('product_accounts')
           .select('*')
           .in('product_id', productIds);
+
+        console.log('Accounts query result:', {
+          error: accountsResult.error,
+          count: accountsResult.data?.length || 0,
+          data: accountsResult.data
+        });
 
         if (!accountsResult.error && accountsResult.data) {
           const accountsByProduct: Record<string, ProductAccount[]> = {};
@@ -287,6 +294,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
             }
             accountsByProduct[account.product_id].push(account);
           });
+          console.log('Accounts by product:', accountsByProduct);
           setProductAccounts(accountsByProduct);
         }
       }
@@ -347,31 +355,47 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
   };
 
   const handleSaveAccount = async () => {
-    if (!selectedProductId) return;
+    if (!selectedProductId) {
+      console.log('No product selected');
+      return;
+    }
 
     setShowAccountValidation(true);
 
     try {
       if (!accountFormData.accountLogin.trim() || !accountFormData.accountPassword.trim()) {
+        console.log('Login or password is empty');
         return;
       }
 
-      const { error } = await supabase.from('product_accounts').insert([{
+      console.log('Saving account for product:', selectedProductId);
+      console.log('Account data:', {
+        login: accountFormData.accountLogin,
+        password: '***',
+        email: accountFormData.accountEmail,
+      });
+
+      const { data, error } = await supabase.from('product_accounts').insert([{
         product_id: selectedProductId,
         account_login: accountFormData.accountLogin,
         account_password: accountFormData.accountPassword,
         account_email: accountFormData.accountEmail || null,
         account_email_password: accountFormData.accountEmailPassword || null,
-      }]);
+      }]).select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Account saved successfully:', data);
 
       setAccountFormData({ accountLogin: '', accountPassword: '', accountEmail: '', accountEmailPassword: '' });
       setShowAccountValidation(false);
-      loadData();
+      await loadData();
     } catch (error) {
       console.error('Error saving account:', error);
-      alert('Ошибка сохранения аккаунта');
+      alert('Ошибка сохранения аккаунта: ' + (error as any).message);
     }
   };
 
