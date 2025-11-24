@@ -554,14 +554,6 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      {productType === 'accounts' && (
-                        <button
-                          onClick={() => openAccountsModal(product.id)}
-                          className="px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 bg-gray-200 text-gray-800 hover:bg-gray-300 active:bg-gray-400 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                        >
-                          Аккаунты
-                        </button>
-                      )}
                       <button
                         onClick={() => openModal(product)}
                         className="px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700"
