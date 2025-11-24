@@ -581,7 +581,7 @@ export const ProductsManagerByType = ({ storeId, productType, onBack }: Products
       </div>
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingProduct ? 'Редактировать товар' : 'Новый товар'}>
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Категория (рекомендуется)
